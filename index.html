@@ -1,4 +1,184 @@
 <!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LINE 購物網站</title>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+<style>
+body { 
+    font-family: Arial; 
+    background:#f7f7f7;
+    display:flex; 
+    justify-content:center; 
+    padding:25px; 
+    margin:0;
+}
+
+.card {
+    background:white;
+    width:95%;
+    max-width:600px;
+    box-shadow:0 8px 25px rgba(0,0,0,0.12);
+    border-radius:18px;
+    padding:25px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+h2 { text-align:center; }
+
+label { font-weight:bold; margin-top:10px; display:block; }
+input, select, textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; }
+
+button {
+    margin-top:20px;
+    padding:12px 0; 
+    font-size:20px; 
+    border-radius:10px; 
+    cursor:pointer; 
+    font-weight:bold; 
+    border:none;
+    background: linear-gradient(145deg, #3498db, #2980b9);
+    color:white;
+}
+
+button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 14px rgba(0,0,0,0.12);
+}
+</style>
+</head>
+
+<body>
+<div class="card">
+    <h2>購物下單表單</h2>
+    <div id="userInfo">正在獲取使用者資訊...</div>
+
+    <label>商品分類</label>
+    <input type="text" id="productCategory" placeholder="例如：零食、飲料">
+
+    <label>商品ID</label>
+    <input type="text" id="productId" placeholder="輸入商品ID">
+
+    <label>商品名稱</label>
+    <input type="text" id="productName" placeholder="輸入商品名稱">
+
+    <label>數量</label>
+    <input type="number" id="quantity" placeholder="輸入數量" min="1">
+
+    <label>單價</label>
+    <input type="number" id="price" placeholder="輸入單價" min="0">
+
+    <label>收件人姓名</label>
+    <input type="text" id="receiverName" placeholder="收件人姓名">
+
+    <label>收件人電話</label>
+    <input type="text" id="receiverPhone" placeholder="收件人電話">
+
+    <label>收件人地址</label>
+    <input type="text" id="receiverAddress" placeholder="收件人地址">
+
+    <label>付款方式</label>
+    <select id="paymentMethod">
+        <option value="貨到付款">貨到付款</option>
+        <option value="LINE Pay">LINE Pay</option>
+    </select>
+
+    <label>備註</label>
+    <textarea id="remark" placeholder="其他備註"></textarea>
+
+    <button id="btnSubmit">送出訂單</button>
+</div>
+
+<script>
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbwm0MFQC-4Y32tb-82sqe-ZJgu9a_JFT5mkoq_gbvyajPFHuPvhFIjt4tPcYBfeUfwv/exec"; // TODO: 換成你的 Apps Script URL
+let userId = "";
+let userName = "";
+
+// 初始化 LIFF
+async function initLiff() {
+    await liff.init({ liffId: "2008573741-WGE2G7lZ" });
+    if (!liff.isLoggedIn()) await liff.login();
+
+    const profile = await liff.getProfile();
+    userId = profile.userId;
+    userName = profile.displayName;
+
+    document.getElementById("userInfo").textContent = `${userName} 您好`;
+}
+
+// 計算小計
+function calcSubtotal() {
+    const qty = Number(document.getElementById("quantity").value) || 0;
+    const price = Number(document.getElementById("price").value) || 0;
+    return qty * price;
+}
+
+// 送出訂單
+document.getElementById("btnSubmit").onclick = async () => {
+    const productCategory = document.getElementById("productCategory").value.trim();
+    const productId = document.getElementById("productId").value.trim();
+    const productNameInput = document.getElementById("productName").value.trim();
+    const quantity = Number(document.getElementById("quantity").value);
+    const price = Number(document.getElementById("price").value);
+    const subtotal = quantity * price;
+    const receiverName = document.getElementById("receiverName").value.trim();
+    const receiverPhone = document.getElementById("receiverPhone").value.trim();
+    const receiverAddress = document.getElementById("receiverAddress").value.trim();
+    const paymentMethod = document.getElementById("paymentMethod").value;
+    const remark = document.getElementById("remark").value.trim();
+
+    if (!productNameInput || quantity<=0 || price<=0 || !receiverName || !receiverPhone || !receiverAddress) {
+        Swal.fire({ icon:"warning", title:"請填寫完整資料" });
+        return;
+    }
+
+    const orderData = {
+        userId,
+        userName,
+        orderTime: new Date().toISOString(),
+        productCategory,
+        productId,
+        productName: productNameInput,
+        quantity,
+        price,
+        subtotal,
+        receiverName,
+        receiverPhone,
+        receiverAddress,
+        paymentMethod,
+        remark
+    };
+
+    try {
+        const res = await fetch(API_ENDPOINT, {
+            method:"POST",
+            body: JSON.stringify(orderData)
+        });
+        const result = await res.json();
+        if(result.message === "成功"){
+            Swal.fire({ icon:"success", title:"訂單送出成功", timer:2000, showConfirmButton:false });
+            // 清空表單
+            document.querySelectorAll("input, textarea").forEach(el => el.value="");
+        } else {
+            Swal.fire({ icon:"error", title:"送出失敗", text:result.message });
+        }
+    } catch(err){
+        Swal.fire({ icon:"error", title:"送出失敗", text:err.message });
+    }
+};
+
+window.onload = initLiff;
+</script>
+</body>
+</html>
+
+
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
