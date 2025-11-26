@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>LIFF 購物網站</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+    }
+
+    .product {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .product img {
+      width: 100px;
+      height: 100px;
+    }
+
+    button {
+      margin-top: 5px;
+    }
+
+    /* Modal 樣式 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 15% auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 400px;
+      border-radius: 5px;
+    }
+
+    .close {
+      float: right;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+  </style>
+</head>
+<body>
+  <h1>LIFF 購物網站</h1>
+
+  <h2>商品列表</h2>
+  <div id="products"></div>
+
+  <h2>購物車</h2>
+  <div id="cart"></div>
+  <div>總價：<span id="totalPrice">0</span> 元</div>
+  <button onclick="showOrderConfirmation()">下單</button>
+
+  <!-- 訂單確認 Modal -->
+  <div id="orderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h3>訂單確認</h3>
+      <div id="orderDetails"></div>
+      <div>總價：<span id="confirmTotal">0</span> 元</div>
+      <div>
+        <label>付款方式：
+          <select id="paymentMethod">
+            <option value="信用卡">信用卡</option>
+            <option value="Line Pay">Line Pay</option>
+            <option value="貨到付款">貨到付款</option>
+          </select>
+        </label>
+      </div>
+      <button onclick="submitOrder()">確認送出</button>
+    </div>
+  </div>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script>
+    // ------------------ 設定區 ------------------
+    const LIFF_ID = "你的_LIFF_ID"; // 改成你的 LIFF ID
+    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxKtkNLIqUbldOizXeT3M8Gtj4fMvafNcjp_7iLk-5xzjV2ROMq8m2GJCO5tPlJ0qj_/exec"; // 改成你的 Apps Script Web App URL
+
+    // 商品列表
+    let products = [
+      { id: 1, name: "商品A", price: 100, image: "https://via.placeholder.com/100?text=商品A" },
+      { id: 2, name: "商品B", price: 200, image: "https://via.placeholder.com/100?text=商品B" },
+      { id: 3, name: "商品C", price: 300, image: "https://via.placeholder.com/100?text=商品C" }
+    ];
+
+    let cart = [];
+
+    // ------------------ LIFF 初始化 ------------------
+    liff.init({ liffId: LIFF_ID })
+      .then(() => {
+        if (!liff.isLoggedIn()) liff.login();
+        renderProducts();
+        renderCart();
+      });
+
+    // ------------------ 商品操作 ------------------
+    function renderProducts() {
+      const productsDiv = document.getElementById('products');
+      productsDiv.innerHTML = '';
+      products.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'product';
+        div.innerHTML = `
+          <img src="${p.image}" alt="${p.name}">
+          <div>${p.name}</div>
+          <div>${p.price} 元</div>
+          <button onclick="addToCart(${p.id})">加入購物車</button>
+        `;
+        productsDiv.appendChild(div);
+      });
+    }
+
+    function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      const existing = cart.find(item => item.id === productId);
+      if (existing) existing.quantity += 1;
+      else cart.push({ ...product, quantity: 1 });
+      renderCart();
+    }
+
+    function removeFromCart(productId) {
+      cart = cart.filter(item => item.id !== productId);
+      renderCart();
+    }
+
+    function renderCart() {
+      const cartDiv = document.getElementById('cart');
+      const totalPriceSpan = document.getElementById('totalPrice');
+      cartDiv.innerHTML = '';
+      let total = 0;
+
+      cart.forEach(item => {
+        total += item.price * item.quantity;
+        const div = document.createElement('div');
+        div.innerHTML = `
+          ${item.name} x ${item.quantity} = ${item.price * item.quantity} 元
+          <button onclick="removeFromCart(${item.id})">刪除</button>
+        `;
+        cartDiv.appendChild(div);
+      });
+
+      totalPriceSpan.textContent = total;
+    }
+
+    // ------------------ 訂單確認 Modal ------------------
+    function showOrderConfirmation() {
+      if (cart.length === 0) {
+        alert('購物車是空的！');
+        return;
+      }
+
+      const orderDetailsDiv = document.getElementById('orderDetails');
+      let total = 0;
+      orderDetailsDiv.innerHTML = '';
+
+      cart.forEach(item => {
+        total += item.price * item.quantity;
+        const div = document.createElement('div');
+        div.textContent = `${item.name} x ${item.quantity} = ${item.price * item.quantity} 元`;
+        orderDetailsDiv.appendChild(div);
+      });
+
+      document.getElementById('confirmTotal').textContent = total;
+      document.getElementById('orderModal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('orderModal').style.display = 'none';
+    }
+
+    // ------------------ 下單送出 ------------------
+    function submitOrder() {
+      const payment = document.getElementById('paymentMethod').value;
+
+      liff.getProfile().then(profile => {
+        const payload = {
+          userId: profile.userId,
+          order: cart,
+          paymentMethod: payment,
+          orderId: generateOrderId()
+        };
+
+        fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+          alert(`訂單已送出！\n訂單編號: ${payload.orderId}\nLINE 已收到通知`);
+          cart = [];
+          renderCart();
+          closeModal();
+        })
+        .catch(err => {
+          console.error(err);
+          alert('訂單送出失敗');
+        });
+      });
+    }
+
+    // ------------------ 訂單編號生成 ------------------
+    function generateOrderId() {
+      const timestamp = Date.now().toString();
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      return `ORD-${timestamp}-${random}`;
+    }
+
+  </script>
+</body>
+</html>
