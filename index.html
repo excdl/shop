@@ -1,140 +1,118 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>專業購物商城</title>
 <style>
-  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5; }
-  header { background:#4CAF50; color:#fff; padding:15px; text-align:center; font-size:24px; }
-  nav { display:flex; justify-content:center; margin:10px 0; }
-  nav button { margin:0 5px; padding:10px 20px; border:none; background:#ddd; cursor:pointer; }
-  nav button.active { background:#4CAF50; color:#fff; }
-  .container { display:flex; flex-wrap:wrap; justify-content:center; }
-  .card { background:#fff; width:200px; margin:10px; border-radius:5px; overflow:hidden; box-shadow:0 0 5px rgba(0,0,0,0.2); }
-  .card img { width:100%; height:150px; object-fit:cover; }
-  .card-body { padding:10px; }
-  .card-body h4 { margin:0 0 5px; font-size:16px; }
-  .card-body p { margin:5px 0; font-size:14px; color:#333; }
-  .card-body input { width:50px; }
-  .card-body button { margin-top:5px; padding:5px 10px; border:none; background:#4CAF50; color:#fff; cursor:pointer; }
+  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f9f9f9; }
+  header { background:#4CAF50; color:white; padding:1em; text-align:center; }
+  .container { width:90%; max-width:1200px; margin:2em auto; }
+  .categories { display:flex; gap:1em; flex-wrap:wrap; margin-bottom:2em; }
+  .category-btn { padding:0.5em 1em; background:#eee; border:none; cursor:pointer; border-radius:4px; }
+  .category-btn.active { background:#4CAF50; color:white; }
+  .products { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1em; }
+  .product-card { background:white; border-radius:4px; padding:1em; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+  .product-card img { width:100%; height:150px; object-fit:cover; border-radius:4px; }
+  .product-card h3 { margin:0.5em 0 0.3em 0; font-size:1.1em; }
+  .product-card p { margin:0.2em 0; font-size:0.9em; color:#555; }
+  .product-card .price { font-weight:bold; color:#E91E63; margin-top:0.5em; }
 </style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
-
-<header id="welcome">專業購物商城</header>
-<nav id="categoryTabs"></nav>
-<div class="container" id="productContainer"></div>
+<header>
+  <h1>專業購物商城</h1>
+  <p id="greeting">您好, 會員</p>
+</header>
+<div class="container">
+  <div class="categories" id="categoryContainer"></div>
+  <div class="products" id="productContainer"></div>
+</div>
 
 <script>
-// ===== 設定區 =====
-const API_URL = "https://script.google.com/macros/s/AKfycbxSnZiqIZD3W60IXI2v9GKy9YNZDTXHpXaCW87JuMB7HYpnjz1_22VeD62gzEj1Nfry/exec"; // GET 商品 / POST 訂單
+const API_URL = "https://script.google.com/macros/s/AKfycbxSnZiqIZD3W60IXI2v9GKy9YNZDTXHpXaCW87JuMB7HYpnjz1_22VeD62gzEj1Nfry/exec"; // <-- 替換為你的 GAS URL
 let products = [];
 let categories = [];
-let userName = "2008573741-WGE2G7lZ"; // 可改為 LIFF / LINE Login 取得名稱
 
-// ===== 取得商品清單 =====
-async function fetchProducts(){
-  try {
-    const res = await fetch(API_URL);
-    products = await res.json();
-
-    // 取得所有類別
-    categories = [...new Set(products.map(p => p.類別))];
-    renderCategories();
-    renderProducts(categories[0]);
-  } catch(e){
-    console.error(e);
-    alert("無法取得商品清單");
+// LIFF 初始化
+async function initLIFF() {
+  await liff.init({ liffId: "2008573741-WGE2G7lZ" }); // <-- 替換為你的 LIFF ID
+  if (liff.isLoggedIn()) {
+    const profile = await liff.getProfile();
+    setGreeting(profile.displayName);
+  } else {
+    liff.login();
   }
 }
 
-// ===== 渲染類別按鈕 =====
-function renderCategories(){
-  const nav = document.getElementById("categoryTabs");
-  nav.innerHTML = "";
-  categories.forEach(cat=>{
-    const btn = document.createElement("button");
-    btn.textContent = cat;
-    btn.onclick = ()=> {
-      document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
-      renderProducts(cat);
-    }
-    if(nav.children.length===0) btn.classList.add("active");
-    nav.appendChild(btn);
-  });
+function setGreeting(userName){
+  document.getElementById("greeting").textContent = `${userName} 您好`;
 }
 
-// ===== 渲染商品卡片 =====
+// 取得商品清單
+async function fetchProducts(){
+  try{
+    const res = await fetch(API_URL);
+    if(!res.ok) throw new Error("網路錯誤");
+    products = await res.json();
+
+    // 將 Google Drive 連結轉成直接顯示 URL
+    products.forEach(p => {
+      if(p['商品照片']){
+        // 若格式為: "https://drive.google.com/file/d/FILE_ID/view?usp=sharing"
+        const match = p['商品照片'].match(/\/d\/([a-zA-Z0-9_-]+)\//);
+        if(match) p['商品照片'] = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    });
+
+    categories = [...new Set(products.map(p => p['類別']))];
+    renderCategories();
+    renderProducts(categories[0]);
+  }catch(e){
+    console.error(e);
+    alert("無法取得商品清單，請檢查後端是否正確部署或允許匿名存取。");
+  }
+}
+
+// 顯示類別按鈕
+function renderCategories(){
+  const container = document.getElementById("categoryContainer");
+  container.innerHTML = "";
+  categories.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.textContent = cat;
+    btn.className = "category-btn";
+    btn.onclick = ()=> { document.querySelectorAll(".category-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); renderProducts(cat); };
+    container.appendChild(btn);
+  });
+  if(container.firstChild) container.firstChild.classList.add("active");
+}
+
+// 顯示商品卡片
 function renderProducts(category){
   const container = document.getElementById("productContainer");
   container.innerHTML = "";
-  const filtered = products.filter(p=>p.類別===category);
-  filtered.forEach(p=>{
+  products.filter(p=>p['類別']===category).forEach(p=>{
     const card = document.createElement("div");
-    card.className = "card";
-    const img = document.createElement("img");
-    img.src = p.商品照片; // Google Drive 直接網址或可轉為可公開 URL
-    const body = document.createElement("div");
-    body.className = "card-body";
-    body.innerHTML = `
-      <h4>${p.商品名稱}</h4>
-      <p>${p.特色說明 || ""}</p>
-      <p>價格: ${p.售價}</p>
-      <label>數量: <input type="number" min="1" value="1" id="qty_${p.商品名稱}"></label>
-      <button onclick="orderProduct('${p.商品名稱}')">加入購物車</button>
+    card.className = "product-card";
+    card.innerHTML = `
+      <img src="${p['商品照片'] || ''}" alt="${p['商品名稱']}">
+      <h3>${p['商品名稱']}</h3>
+      <p>${p['特色說明'] || ''}</p>
+      <p class="price">${p['售價'] || ''}</p>
     `;
-    card.appendChild(img);
-    card.appendChild(body);
     container.appendChild(card);
   });
 }
 
-// ===== 送出訂單 =====
-async function orderProduct(productName){
-  const product = products.find(p=>p.商品名稱===productName);
-  const qty = parseInt(document.getElementById("qty_"+productName).value);
-  if(qty<1){ alert("數量至少 1"); return; }
-
-  const data = {
-    userId: "LINE_USER_ID", // 可透過 LIFF 取得
-    userName: userName,
-    orderTime: new Date(),
-    productCategory: product.類別,
-    productId: product.商品照片, // 或自己設定 ID
-    productName: product.商品名稱,
-    quantity: qty,
-    price: parseFloat(product.售價.replace("NT$","")) || 0,
-    subtotal: (parseFloat(product.售價.replace("NT$",""))*qty).toFixed(2),
-    receiverName: "",
-    receiverPhone: "",
-    receiverAddress: "",
-    paymentMethod: "",
-    remark: ""
-  };
-
-  try{
-    const res = await fetch(API_URL, {
-      method:"POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(data)
-    });
-    const result = await res.json();
-    if(result.message==="成功") alert("訂單已送出");
-    else alert("訂單送出失敗");
-  }catch(e){
-    console.error(e);
-    alert("送單失敗");
-  }
-}
-
-// ===== 初始化 =====
-document.getElementById("welcome").textContent = userName + " 您好，歡迎光臨";
+// 啟動
+initLIFF();
 fetchProducts();
 </script>
 </body>
 </html>
+
 
 
 
