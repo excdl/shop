@@ -4,54 +4,13 @@
   <meta charset="UTF-8">
   <title>LIFF 購物網站</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-    }
-
-    .product {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-
-    .product img {
-      width: 100px;
-      height: 100px;
-    }
-
-    button {
-      margin-top: 5px;
-    }
-
-    /* Modal 樣式 */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0,0,0,0.5);
-    }
-
-    .modal-content {
-      background-color: #fff;
-      margin: 15% auto;
-      padding: 20px;
-      width: 80%;
-      max-width: 400px;
-      border-radius: 5px;
-    }
-
-    .close {
-      float: right;
-      font-size: 20px;
-      cursor: pointer;
-    }
-
+    body { font-family: Arial, sans-serif; padding: 10px; }
+    .product { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    .product img { width: 100px; height: 100px; }
+    button { margin-top: 5px; }
+    .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #fff; margin: 15% auto; padding: 20px; width: 80%; max-width: 400px; border-radius: 5px; }
+    .close { float: right; font-size: 20px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -88,10 +47,9 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script>
     // ------------------ 設定區 ------------------
-    const LIFF_ID = "2008573741-WGE2G7lZ"; // 改成你的 LIFF ID
-    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxKtkNLIqUbldOizXeT3M8Gtj4fMvafNcjp_7iLk-5xzjV2ROMq8m2GJCO5tPlJ0qj_/exec"; // 改成你的 Apps Script Web App URL
+    const LIFF_ID = "2008573741-WGE2G7lZ"; 
+    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxKtkNLIqUbldOizXeT3M8Gtj4fMvafNcjp_7iLk-5xzjV2ROMq8m2GJCO5tPlJ0qj_/exec"; 
 
-    // 商品列表
     let products = [
       { id: 1, name: "商品A", price: 100, image: "https://via.placeholder.com/100?text=商品A" },
       { id: 2, name: "商品B", price: 200, image: "https://via.placeholder.com/100?text=商品B" },
@@ -102,11 +60,7 @@
 
     // ------------------ LIFF 初始化 ------------------
     liff.init({ liffId: LIFF_ID })
-      .then(() => {
-        if (!liff.isLoggedIn()) liff.login();
-        renderProducts();
-        renderCart();
-      });
+      .then(() => { if (!liff.isLoggedIn()) liff.login(); renderProducts(); renderCart(); });
 
     // ------------------ 商品操作 ------------------
     function renderProducts() {
@@ -143,76 +97,33 @@
       const totalPriceSpan = document.getElementById('totalPrice');
       cartDiv.innerHTML = '';
       let total = 0;
-
       cart.forEach(item => {
         total += item.price * item.quantity;
         const div = document.createElement('div');
-        div.innerHTML = `
-          ${item.name} x ${item.quantity} = ${item.price * item.quantity} 元
-          <button onclick="removeFromCart(${item.id})">刪除</button>
-        `;
+        div.innerHTML = `${item.name} x ${item.quantity} = ${item.price * item.quantity} 元
+                         <button onclick="removeFromCart(${item.id})">刪除</button>`;
         cartDiv.appendChild(div);
       });
-
       totalPriceSpan.textContent = total;
     }
 
     // ------------------ 訂單確認 Modal ------------------
     function showOrderConfirmation() {
-      if (cart.length === 0) {
-        alert('購物車是空的！');
-        return;
-      }
-
+      if (cart.length === 0) { alert('購物車是空的！'); return; }
       const orderDetailsDiv = document.getElementById('orderDetails');
       let total = 0;
       orderDetailsDiv.innerHTML = '';
-
       cart.forEach(item => {
         total += item.price * item.quantity;
         const div = document.createElement('div');
         div.textContent = `${item.name} x ${item.quantity} = ${item.price * item.quantity} 元`;
         orderDetailsDiv.appendChild(div);
       });
-
       document.getElementById('confirmTotal').textContent = total;
       document.getElementById('orderModal').style.display = 'block';
     }
 
-    function closeModal() {
-      document.getElementById('orderModal').style.display = 'none';
-    }
-
-    // ------------------ 下單送出 ------------------
-    function submitOrder() {
-      const payment = document.getElementById('paymentMethod').value;
-
-      liff.getProfile().then(profile => {
-        const payload = {
-          userId: profile.userId,
-          order: cart,
-          paymentMethod: payment,
-          orderId: generateOrderId()
-        };
-
-        fetch(WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-        .then(res => res.json())
-        .then(data => {
-          alert(`訂單已送出！\n訂單編號: ${payload.orderId}\nLINE 已收到通知`);
-          cart = [];
-          renderCart();
-          closeModal();
-        })
-        .catch(err => {
-          console.error(err);
-          alert('訂單送出失敗');
-        });
-      });
-    }
+    function closeModal() { document.getElementById('orderModal').style.display = 'none'; }
 
     // ------------------ 訂單編號生成 ------------------
     function generateOrderId() {
@@ -220,6 +131,78 @@
       const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
       return `ORD-${timestamp}-${random}`;
     }
+
+    // ------------------ 前端檢測 Webhook ------------------
+    async function preCheckOrder(payload) {
+      try {
+        const testRes = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ test: true })
+        });
+        const testText = await testRes.text();
+        try {
+          const testData = JSON.parse(testText);
+          if (testData.status !== 'ok') {
+            alert(`Web App 測試失敗，訊息：${JSON.stringify(testData)}`);
+            console.error('Web App 測試失敗', testData);
+            return false;
+          }
+        } catch (err) {
+          alert(`Web App 回傳非 JSON 或解析錯誤：\n${testText}`);
+          console.error('Web App JSON 解析錯誤', testText);
+          return false;
+        }
+        return true;
+      } catch (err) {
+        alert(`無法存取 Web App，Fetch 錯誤：\n${err}`);
+        console.error('Web App Fetch 錯誤', err);
+        return false;
+      }
+    }
+
+    // ------------------ 下單送出 ------------------
+    async function submitOrder() {
+      const payment = document.getElementById('paymentMethod').value;
+      liff.getProfile().then(async profile => {
+        const payload = { userId: profile.userId, order: cart, paymentMethod: payment, orderId: generateOrderId() };
+        const checkOK = await preCheckOrder(payload);
+        if (!checkOK) return;
+
+        fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(async res => {
+          const text = await res.text();
+          try {
+            const data = JSON.parse(text);
+            if (data.status === 'ok') {
+              alert(`訂單已送出！\n訂單編號: ${payload.orderId}\nLINE 已收到通知`);
+              cart = [];
+              renderCart();
+              closeModal();
+            } else {
+              alert(`訂單送出失敗，後端訊息：${JSON.stringify(data)}`);
+              console.error('後端回傳錯誤', data);
+            }
+          } catch (err) {
+            alert(`訂單送出失敗，解析回傳訊息錯誤：\n${text}`);
+            console.error('解析 JSON 失敗', text);
+          }
+        })
+        .catch(err => {
+          alert(`訂單送出失敗，Fetch 錯誤：\n${err}`);
+          console.error('Fetch 錯誤', err);
+        });
+
+      });
+    }
+
+  </script>
+</body>
+</html>
 
   </script>
 </body>
