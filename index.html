@@ -158,12 +158,16 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzgQ0YkVtRkOcXKNR9UNSLH
 let products=[], categories=[], cart=[], userId="", userName="";
 let pickupStores = [];
 
-// 模擬 LINE 登入
-async function initLIFF(){
-  userName = "LINE會員";
-  userId = "LINE123";
-  document.getElementById("greeting").textContent = `${userName} 您好`;
-}
+liff.init({ liffId: "2008573741-WGE2G7lZ" }).then(() => {
+    if (liff.isLoggedIn()) {
+        liff.getProfile().then(profile => {
+            userName = profile.displayName;
+            userId = profile.userId;
+            document.getElementById("greeting").textContent = `${userName} 您好`;
+        });
+    }
+});
+
 
 // 取得產品清單 & 取貨門市
 async function fetchProducts(){
