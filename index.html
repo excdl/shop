@@ -95,6 +95,7 @@ button#checkoutBtn:hover { background:#45a049; }
 const API_URL = "https://script.google.com/macros/s/AKfycbyARYofq8yCKee6DgIg25zeMoVVjkTihuhBFxGPptBrDKU_OZPMI2SlMFnBNT-iH77E/exec";
 let products=[], categories=[], cart=[], userId="", userName="", pickupStores=[];
 
+// ======= LIFF 初始化 =======
 async function initLIFF(){
   await liff.init({ liffId: "2008573741-WGE2G7lZ" });
   if(liff.isLoggedIn()){
@@ -104,6 +105,7 @@ async function initLIFF(){
   } else liff.login();
 }
 
+// ======= 抓產品和門市 =======
 async function fetchProducts(){
   const res = await fetch(API_URL + "?action=products");
   products = await res.json();
@@ -117,6 +119,7 @@ async function fetchProducts(){
   pickupStores.forEach(s=>{ const opt = document.createElement("option"); opt.value=s; opt.textContent=s; storeSelect.appendChild(opt); });
 }
 
+// ======= 顯示分類 =======
 function renderCategories(){
   const container = document.getElementById("categoryContainer");
   container.innerHTML="";
@@ -129,6 +132,7 @@ function renderCategories(){
   if(container.firstChild) container.firstChild.classList.add("active");
 }
 
+// ======= 顯示商品 =======
 function renderProducts(category){
   const container = document.getElementById("productContainer");
   container.innerHTML="";
@@ -151,11 +155,13 @@ function renderProducts(category){
   });
 }
 
+// ======= 數量控制 =======
 function changeQty(name, delta){
   const span = document.getElementById(`qty-${name}`);
   let qty = parseInt(span.textContent); qty+=delta; if(qty<1) qty=1; span.textContent=qty;
 }
 
+// ======= 加入購物車動畫 =======
 function addToCartWithAnimation(name, btn){
   const qty = parseInt(document.getElementById(`qty-${name}`).textContent);
   const product = products.find(p=>p['商品名稱']===name);
@@ -174,6 +180,7 @@ function addToCartWithAnimation(name, btn){
   flyImg.addEventListener("transitionend", ()=>{ document.body.removeChild(flyImg); updateCartBar(); });
 }
 
+// ======= 購物車條更新 =======
 function updateCartBar(){
   const cartBar = document.getElementById("cartBar");
   if(cart.length===0){ cartBar.style.display="none"; return; }
@@ -183,15 +190,6 @@ function updateCartBar(){
   cartBar.style.display="flex";
 }
 
-const cartBtn = document.getElementById("cartBtn");
-const cartBar = document.getElementById("cartBar");
-const cartModal = document.getElementById("cartModal");
-const cartClose = document.getElementById("cartClose");
-cartBtn.onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
-cartBar.onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
-cartClose.onclick=()=>{ cartModal.style.display="none"; }
-
-// ======= renderCart() =======
 // ======= renderCart() =======
 function renderCart(){
   const container = document.getElementById("cartItems");
@@ -200,7 +198,7 @@ function renderCart(){
   if(cart.length === 0){
     container.innerHTML = "<p style='text-align:center;color:#555;'>購物車是空的</p>";
     document.getElementById("cartTotal").textContent = "0";
-    updateCartBar(); // 隱藏底部購物車條
+    updateCartBar(); 
     return;
   }
 
@@ -214,7 +212,23 @@ function renderCart(){
   });
 
   document.getElementById("cartTotal").textContent = total;
-  updateCartBar(); // 更新底部購物車條
+  updateCartBar();
+}
+
+// ======= 購物車開關 =======
+const cartBtn = document.getElementById("cartBtn");
+const cartBar = document.getElementById("cartBar");
+const cartModal = document.getElementById("cartModal");
+const cartClose = document.getElementById("cartClose");
+cartBtn.onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
+cartBar.onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
+cartClose.onclick=()=>{ cartModal.style.display="none"; }
+
+// ======= 取貨方式切換 =======
+document.getElementById("deliveryMethod").onchange=function(){
+  const val=this.value;
+  if(val==="自取"){ document.getElementById("selfPickup").style.display="block"; document.getElementById("deliveryForm").style.display="none"; }
+  else{ document.getElementById("selfPickup").style.display="none"; document.getElementById("deliveryForm").style.display="block"; }
 }
 
 // ======= 結帳按鈕事件 =======
@@ -261,20 +275,17 @@ document.getElementById("checkoutBtn").onclick = async function(){
 
     let result;
     try{
-      result = await res.json(); // 安全解析 JSON
+      result = await res.json(); 
     } catch(e){
       throw new Error("伺服器回傳非 JSON 格式");
     }
 
-    // ✅ 成功先 alert
     alert("訂單完成，單號：" + result.orderId);
 
-    // 產生 QR Code
     const qrURL = `https://你的網站/order.html?orderId=${result.orderId}`;
     document.getElementById("qrcodeContainer").innerHTML = "";
     new QRCode(document.getElementById("qrcodeContainer"), { text: qrURL, width:180, height:180 });
 
-    // LIFF 分享
     if(liff){
       liff.shareTargetPicker([{
         type: 'text',
@@ -283,7 +294,6 @@ document.getElementById("checkoutBtn").onclick = async function(){
         .catch(err=>console.error(err));
     }
 
-    // 清空購物車並更新畫面
     cart.length = 0;
     renderCart();
     updateCartBar();
@@ -292,18 +302,14 @@ document.getElementById("checkoutBtn").onclick = async function(){
     console.error("送出訂單錯誤：", err);
     alert("訂單送出失敗，請稍後再試");
   }
-};
+}
 
+// ======= 初始化 =======
 initLIFF();
 fetchProducts();
 </script>
 </body>
 </html>
-
-
-
-
-
 
 
 
