@@ -26,7 +26,21 @@ header p{margin:0.3em 0 0 0;font-size:0.95em;}
 .quantity-control{margin:0.4em 0;display:flex;align-items:center;justify-content:center;gap:5px;}
 .quantity-control button{width:28px;height:28px;border:none;background:#4CAF50;color:white;border-radius:4px;cursor:pointer;}
 .quantity-control span{min-width:18px;text-align:center;display:inline-block;}
-.add-cart{background:none;border:none;cursor:pointer;font-size:1.5em;margin-top:0.4em;}
+.add-cart {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+.add-cart.active { background: #4CAF50; color: white; }
+.add-cart:active { transform: scale(0.85); }
 .cart{position:fixed;right:15px;bottom:75px;background:#E91E63;color:white;padding:0.9em 1em;border-radius:50%;cursor:pointer;font-weight:bold;font-size:1.4em;box-shadow:0 2px 10px rgba(0,0,0,0.3);transition:0.3s;z-index:999;}
 .cart:hover{transform:scale(1.1);}
 #cartBar{position:fixed;left:0;bottom:0;width:100%;background:#4CAF50;color:white;display:flex;justify-content:space-between;align-items:center;padding:0.8em 1em;box-shadow:0 -2px 5px rgba(0,0,0,0.2);font-weight:bold;font-size:0.95em;cursor:pointer;z-index:998;display:none;border-top-left-radius:12px;border-top-right-radius:12px;}
@@ -106,7 +120,7 @@ header p{font-size:0.85em;}
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwwzSkccQoNfp-5ow32frNOeCeOd2YH39kWBJqcjLxrYyk7qrs41YqMfkriqJaZvODD/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxYviMokofqyXmxEXkppVJfHhgQo7HCgRUlOsjzhijOmwQKp7fR3fJ3TNymGByxYTkP/exec";
 let products=[], categories=[], cart=[], userId="", userName="";
 let pickupStores = [];
 
@@ -188,34 +202,69 @@ function changeQty(name, delta){
   span.textContent=qty;
 }
 
+// ===== 新增動畫函式（加入/取消購物車） =====
 function addToCartWithAnimation(name, btn){
   const qty = parseInt(document.getElementById(`qty-${name}`).textContent);
   const product = products.find(p=>p['商品名稱']===name);
-  const exist = cart.find(c=>c.name===name);
-  if(exist) exist.quantity += qty;
-  else cart.push({name, price:parseInt(product['售價']), quantity:qty, category:product['類別']});
+  const existIndex = cart.findIndex(c=>c.name===name);
 
-  // 購物車顏色變綠
-  btn.closest(".product-card").classList.add("active");
-
-  // 飛入動畫
   const img = btn.closest(".product-card").querySelector("img");
   const imgRect = img.getBoundingClientRect();
   const cartRect = document.getElementById("cartBtn").getBoundingClientRect();
-  const flyImg = img.cloneNode(true);
-  flyImg.style.position="fixed";
-  flyImg.style.left=imgRect.left+"px";
-  flyImg.style.top=imgRect.top+"px";
-  flyImg.style.width=imgRect.width+"px";
-  flyImg.style.height=imgRect.height+"px";
-  flyImg.style.transition="all 0.8s ease-in-out";
-  flyImg.style.zIndex=1000;
-  document.body.appendChild(flyImg);
 
-  const dx = cartRect.left - imgRect.left + "px";
-  const dy = cartRect.top - imgRect.top + "px";
-  requestAnimationFrame(()=>{ flyImg.style.transform=`translate(${dx},${dy}) scale(0.2)`; flyImg.style.opacity=0; });
-  flyImg.addEventListener("transitionend",()=>{ document.body.removeChild(flyImg); updateCartBar(); });
+  if(existIndex !== -1){ 
+    cart.splice(existIndex, 1);
+    btn.classList.remove("active");
+
+    const flyImg = img.cloneNode(true);
+    flyImg.style.position = "fixed";
+    flyImg.style.left = cartRect.left + "px";
+    flyImg.style.top = cartRect.top + "px";
+    flyImg.style.width = imgRect.width + "px";
+    flyImg.style.height = imgRect.height + "px";
+    flyImg.style.transition = "all 0.8s ease-in-out";
+    flyImg.style.zIndex = 1000;
+    flyImg.style.opacity = 0.8;
+    document.body.appendChild(flyImg);
+
+    const dx = imgRect.left - cartRect.left + "px";
+    const dy = imgRect.top - cartRect.top + "px";
+    requestAnimationFrame(()=>{
+      flyImg.style.transform = `translate(${dx},${dy}) scale(1)`;
+      flyImg.style.opacity = 0;
+    });
+    flyImg.addEventListener("transitionend", ()=>{
+      document.body.removeChild(flyImg);
+      updateCartBar();
+    });
+
+  } else { 
+    cart.push({name, price: parseInt(product['售價']), quantity: qty, category: product['類別']});
+    btn.classList.add("active");
+
+    const flyImg = img.cloneNode(true);
+    flyImg.style.position = "fixed";
+    flyImg.style.left = imgRect.left + "px";
+    flyImg.style.top = imgRect.top + "px";
+    flyImg.style.width = imgRect.width + "px";
+    flyImg.style.height = imgRect.height + "px";
+    flyImg.style.transition = "all 0.8s ease-in-out";
+    flyImg.style.zIndex = 1000;
+    flyImg.style.opacity = 1;
+    document.body.appendChild(flyImg);
+
+    const dx = cartRect.left - imgRect.left + "px";
+    const dy = cartRect.top - imgRect.top + "px";
+    requestAnimationFrame(()=>{
+      flyImg.style.transform = `translate(${dx},${dy}) scale(0.2)`;
+      flyImg.style.opacity = 0.5;
+    });
+    flyImg.addEventListener("transitionend", ()=>{
+      document.body.removeChild(flyImg);
+      updateCartBar();
+    });
+  }
+  updateCartBar();
 }
 
 function updateCartBar(){
@@ -288,32 +337,18 @@ document.getElementById("checkoutBtn").onclick=async function(){
   // 生成 QR Code
   document.getElementById("qrcodeContainer").innerHTML="";
   const orderDetailUrl = `${window.location.origin}/orderDetail.html?orderId=${result.orderId}`;
-  const qr = new QRCode(document.getElementById("qrcodeContainer"), {text: orderDetailUrl,width:128,height:128});
-  const link = document.createElement("a");
-  link.href = orderDetailUrl;
-  link.textContent = "點擊查看訂單明細";
-  link.target = "_blank";
-  link.style.display = "block";
-  link.style.textAlign = "center";
-  link.style.marginTop = "0.5em";
-  document.getElementById("qrcodeContainer").appendChild(link);
+  const qr = new QRCode(document.getElementById("qrcodeContainer"), {text: orderDetailUrl, width:128, height:128});
 
-  // 發送 LINE 訊息
-  try{ 
-    await liff.sendMessages([{
-      type:'text',
-      text:`訂單完成，單號：${result.orderId}\n總額：${totalAmount}\n取貨方式：${deliveryMethod}\n門市：${pickupStore||"-"}\n收件人：${receiverName}\n電話：${receiverPhone}\n地址：${receiverAddress}\n查看訂單明細：${orderDetailUrl}`
-    }]); 
-  }catch(e){ console.log("LINE 訊息發送失敗",e); }
-
-  cart=[]; renderCart();
+  cart=[]; updateCartBar(); renderCart();
 }
 
+// 初始化
 initLIFF();
 fetchProducts();
 </script>
 </body>
 </html>
+
 
 
 
