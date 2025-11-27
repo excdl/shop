@@ -19,19 +19,56 @@ header p { margin:0.3em 0 0 0; font-size:0.95em; }
 
 .products { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.8em; }
 
-.product-card { background:white; border-radius:8px; padding:0.8em; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; flex-direction:column; transition:0.3s; position:relative; overflow:hidden; font-size:0.9em; }
+.product-card {
+    background:white;
+    border-radius:8px;
+    padding:0.8em;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
+    display:flex;
+    flex-direction:column;
+    transition:0.3s;
+    position:relative;
+    overflow:hidden;
+    font-size:0.9em;
+    height:320px; /* 固定卡片高度 */
+}
 .product-card:hover { transform:translateY(-2px); box-shadow:0 3px 12px rgba(0,0,0,0.2);}
-.product-card img { width:100%; height:140px; object-fit:cover; border-radius:6px; transition:0.3s; }
+.product-card img {
+    width:100%;
+    height:140px; /* 固定圖片高度 */
+    object-fit:cover;
+    border-radius:6px;
+    transition:0.3s;
+}
 .product-card:hover img { transform:scale(1.03); }
-.product-card h3 { margin:0.4em 0 0.2em 0; font-size:1em; }
-.product-card p { margin:0.2em 0; font-size:0.85em; color:#555; }
-.product-card .price { font-weight:bold; color:#E91E63; margin-top:0.4em; }
+.product-card h3 {
+    margin:0.4em 0 0.2em 0;
+    font-size:1em;
+    min-height:1.4em; /* 固定標題高度 */
+}
+.product-card p {
+    margin:0.2em 0;
+    font-size:0.85em;
+    color:#555;
+    min-height:1em; /* 固定段落高度 */
+}
+.product-card .price {
+    font-weight:bold;
+    color:#E91E63;
+    margin-top:0.4em;
+    min-height:1.2em;
+}
 
-.quantity-control { margin:0.4em 0; display:flex; align-items:center; justify-content:center; }
+.quantity-control {
+    margin-top:auto; /* 將數量欄固定在底部 */
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
 .quantity-control button { width:28px; height:28px; margin:0 3px; border:none; background:#4CAF50; color:white; border-radius:4px; cursor:pointer;}
 .quantity-control span { min-width:18px; text-align:center; display:inline-block; }
 
-button.add-cart { padding:0.4em; border:none; border-radius:6px; background:#E91E63; color:white; cursor:pointer; font-size:0.9em; }
+button.add-cart { padding:0.4em; border:none; border-radius:6px; background:#E91E63; color:white; cursor:pointer; font-size:0.9em; margin-top:5px;}
 button.add-cart:hover { background:#d81b60; }
 
 .cart { position:fixed; right:15px; bottom:75px; background:#E91E63; color:white; padding:0.9em 1em; border-radius:50%; cursor:pointer; font-weight:bold; font-size:1.4em; box-shadow:0 2px 10px rgba(0,0,0,0.3); transition:0.3s; z-index:999; }
@@ -127,7 +164,6 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwp7fAgOnNzbVbHuzuhHmMv
 let products=[], categories=[], cart=[], userId="", userName="";
 let pickupStores = [];
 
-// LIFF 初始化
 async function initLIFF(){
   await liff.init({ liffId: "2008573741-WGE2G7lZ" });
   if(liff.isLoggedIn()){
@@ -138,18 +174,15 @@ async function initLIFF(){
   } else liff.login();
 }
 
-// 取得商品清單 & 取貨門市
 async function fetchProducts(){
   const res = await fetch(API_URL + "?action=products");
   products = await res.json();
-
   products.forEach(p=>{
     if(p['商品照片']){
       const match = p['商品照片'].match(/\/d\/([a-zA-Z0-9_-]+)\//);
       if(match) p['商品照片'] = `https://drive.google.com/uc?export=view&id=${match[1]}`;
     }
   });
-
   categories = [...new Set(products.map(p=>p['類別']))];
   renderCategories();
   renderProducts(categories[0]);
@@ -219,7 +252,6 @@ function addToCartWithAnimation(name, btn){
   if(exist){ exist.quantity += qty; } 
   else { cart.push({name, price:parseInt(product['售價']), quantity:qty, category:product['類別']}); }
 
-  // 取得圖片座標
   const img = btn.closest(".product-card").querySelector("img");
   const imgRect = img.getBoundingClientRect();
   const cartRect = document.getElementById("cartBtn").getBoundingClientRect();
@@ -330,6 +362,7 @@ fetchProducts();
 </script>
 </body>
 </html>
+
 
 
 
