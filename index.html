@@ -336,7 +336,19 @@ document.getElementById("checkoutBtn").onclick=async function(){
 
   const res=await fetch(API_URL,{method:'POST',body:JSON.stringify(data)});
   const result=await res.json();
- alert(`訂單建立成功! 訂單號: ${orderId}`);
+  if(result.status==="success"){
+    const orderId = result.orderId;
+
+    // 生成 QR Code
+    const orderUrl = `${window.location.origin}/pickup.html?orderId=${orderId}`;
+    const qrContainer = document.getElementById("qrcodeContainer");
+    qrContainer.innerHTML="";
+    new QRCode(qrContainer, {text: orderUrl, width:200, height:200});
+
+    // 發送 LINE Flex Message
+    await sendOrderToLine(orderId, totalAmount, cart, pickupStore || deliveryMethod, orderUrl);
+
+    alert(`訂單建立成功! 訂單號: ${orderId}`);
     cart = [];
     renderCart();
     document.getElementById("cartModal").style.display="none";
@@ -352,10 +364,6 @@ window.onload = async ()=>{
 </script>
 </body>
 </html>
-
-
-
-
 
 
 
