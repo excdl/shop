@@ -127,11 +127,14 @@ header p{font-size:0.85em;}
   </div>
 </div>
 
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbz-RO66nY14tqrkW3YV_UIzHm11VNOH1VteIp73byI_zZuOCOFVK4lEPqd5DLEVkB1h/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxYviMokofqyXmxEXkppVJfHhgQo7HCgRUlOsjzhijOmwQKp7fR3fJ3TNymGByxYTkP/exec";
 let products=[], categories=[], cart=[], userId="", userName="";
 let pickupStores = [];
 
+// 初始化 LIFF
 async function initLIFF(){
   await liff.init({ liffId:"2008573741-WGE2G7lZ" });
   if(liff.isLoggedIn()){
@@ -142,6 +145,7 @@ async function initLIFF(){
   } else liff.login();
 }
 
+// 取得商品與門市
 async function fetchProducts(){
   const res = await fetch(API_URL+"?action=products");
   products = await res.json();
@@ -160,6 +164,7 @@ async function fetchProducts(){
   });
 }
 
+// 渲染分類
 function renderCategories(){
   const container = document.getElementById("categoryContainer");
   container.innerHTML="";
@@ -177,6 +182,7 @@ function renderCategories(){
   if(container.firstChild) container.firstChild.classList.add("active");
 }
 
+// 渲染商品
 function renderProducts(category){
   const container = document.getElementById("productContainer");
   container.innerHTML="";
@@ -184,7 +190,7 @@ function renderProducts(category){
     const card=document.createElement("div");
     card.className="product-card";
     card.innerHTML=`
-      <img src="${p['商品照片']||''}" alt="${p['商品名稱']}">
+      <img src="${p['商品照片']||''}" alt="${p['商品名稱']}" onerror="this.src='https://via.placeholder.com/150'">
       <h3>${p['商品名稱']}</h3>
       <p>${p['特色說明']||''}</p>
       <p>單位：${p['單位']}</p>
@@ -200,6 +206,7 @@ function renderProducts(category){
   });
 }
 
+// 改變數量
 function changeQty(name, delta){
   const span = document.getElementById(`qty-${name}`);
   let qty = parseInt(span.textContent);
@@ -208,6 +215,7 @@ function changeQty(name, delta){
   span.textContent=qty;
 }
 
+// 加入購物車動畫
 function addToCartWithAnimation(name, btn){
   const qty = parseInt(document.getElementById(`qty-${name}`).textContent);
   const product = products.find(p=>p['商品名稱']===name);
@@ -242,14 +250,18 @@ function addToCartWithAnimation(name, btn){
     flyImg.style.transform = `translate(${dx},${dy}) scale(0.2)`;
     flyImg.style.opacity = 0.5;
   });
+
   flyImg.addEventListener("transitionend", ()=>{
-    document.body.removeChild(flyImg);
+    if(document.body.contains(flyImg)){
+      document.body.removeChild(flyImg); 
+    }
     updateCartBar();
   });
 
   updateCartBar();
 }
 
+// 更新購物車
 function updateCartBar(){
   const cartBar = document.getElementById("cartBar");
   if(cart.length===0){ cartBar.style.display="none"; return; }
@@ -259,6 +271,7 @@ function updateCartBar(){
   cartBar.style.display="flex";
 }
 
+// 購物車 modal
 const cartBtn=document.getElementById("cartBtn");
 const cartBar=document.getElementById("cartBar");
 const cartModal=document.getElementById("cartModal");
@@ -282,6 +295,7 @@ function renderCart(){
   updateCartBar();
 }
 
+// 取貨方式切換
 document.getElementById("deliveryMethod").onchange = function(){
   const val = this.value;
   if(val === "自取"){ 
@@ -293,6 +307,7 @@ document.getElementById("deliveryMethod").onchange = function(){
   }
 }
 
+// 結帳按鈕
 document.getElementById("checkoutBtn").onclick = async function() { 
   if(cart.length === 0) { 
     alert("購物車是空的"); 
@@ -300,7 +315,6 @@ document.getElementById("checkoutBtn").onclick = async function() {
   }
 
   const totalAmount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const totalQty = cart.reduce((sum,i)=>sum+i.quantity,0);
   const deliveryMethod = document.getElementById("deliveryMethod").value;
   let receiverName = "", receiverPhone = "", receiverAddress = "", pickupStore = "";
 
@@ -321,36 +335,11 @@ document.getElementById("checkoutBtn").onclick = async function() {
   }
 
   const paymentMethod = document.getElementById("paymentMethod").value;
-  const orderId = Date.now(); // 訂單編號
 
-  // 準備 QR Code 摘要文字（簡短，不超量）
-  let qrText = `訂單編號：${orderId}\n`;
-  qrText += `會員：${userName}\n`;
-  qrText += `總金額：${totalAmount} 元\n`;
-  qrText += `件數：${totalQty} 件\n`;
-  qrText += `取貨：${deliveryMethod}\n`;
+  // 訂單編號
+  const orderId = Date.now();
 
-  if(deliveryMethod === "外送"){
-    qrText += `收件人：${receiverName}\n`;
-  } else {
-    qrText += `門市：${pickupStore}\n`;
-  }
-
-  // 顯示 QR Code
-  const qrContainer = document.getElementById("qrcodeContainer");
-  qrContainer.innerHTML = "";
-  qrContainer.style.textAlign = "center";
-
-  const qrDiv = document.createElement("div");
-  new QRCode(qrDiv, {
-    text: qrText,
-    width: 200,
-    height: 200
-  });
-  qrDiv.style.margin = "0 auto";
-  qrContainer.appendChild(qrDiv);
-
-  // 顯示完整文字區（可複製）
+  // 組成完整明細文字
   let orderText = `=== 訂單收據 ===\n訂單編號：${orderId}\n會員：${userName}\n付款方式：${paymentMethod}\n取貨方式：${deliveryMethod}\n`;
   if(deliveryMethod === "外送"){
     orderText += `收件人：${receiverName}\n電話：${receiverPhone}\n地址：${receiverAddress}\n`;
@@ -358,22 +347,35 @@ document.getElementById("checkoutBtn").onclick = async function() {
     orderText += `取貨門市：${pickupStore}\n`;
   }
   orderText += `\n商品明細：\n`;
-  cart.forEach(item => { orderText += `${item.name} x${item.quantity} = ${item.quantity*item.price} 元\n`; });
+  cart.forEach(item => {
+    orderText += `${item.name} x${item.quantity} = ${item.quantity * item.price} 元\n`;
+  });
   orderText += `\n總金額：${totalAmount} 元\n================\n`;
 
+  // 顯示 QRCode（掃描就能看到完整明細）
+  const qrContainer = document.getElementById("qrcodeContainer");
+  qrContainer.innerHTML = "";
+  new QRCode(qrContainer, {
+    text: orderText,
+    width: 200,
+    height: 200
+  });
+
+  // 顯示文字可複製
   const pre = document.createElement("pre");
   pre.textContent = orderText;
   pre.style.whiteSpace = "pre-wrap";
   pre.style.wordWrap = "break-word";
-  pre.style.marginTop = "1em";
-  pre.style.padding = "1em";
+  pre.style.marginTop = "0.5em";
+  pre.style.padding = "0.5em";
   pre.style.border = "1px dashed #ccc";
-  pre.style.borderRadius = "12px";
+  pre.style.borderRadius = "8px";
   pre.style.background = "#f9f9f9";
-  pre.style.fontSize = "0.95em";
   pre.style.cursor = "pointer";
   pre.title = "點擊複製訂單文字";
-  pre.onclick = () => { navigator.clipboard.writeText(orderText).then(()=>alert("訂單內容已複製！")); };
+  pre.onclick = () => {
+    navigator.clipboard.writeText(orderText).then(()=>alert("訂單內容已複製到剪貼簿！"));
+  };
   qrContainer.appendChild(pre);
 
   // 清空購物車
@@ -381,14 +383,13 @@ document.getElementById("checkoutBtn").onclick = async function() {
   updateCartBar();
   renderCart();
 
-  alert("訂單完成！掃描 QR Code 可看到訂單摘要，文字區可查看完整明細。");
+  alert("訂單完成！掃描 QRCode 或點擊下方文字即可查看/複製訂單明細。");
 };
-
-
 
 initLIFF();
 fetchProducts();
 </script>
+
 </body>
 </html>
 
