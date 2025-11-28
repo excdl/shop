@@ -165,8 +165,10 @@ header p{font-size:0.85em;}
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwJpqst1oxfzx4a66UR0YpIF5Vg_O97GBQevV-EUa9rvMei6T-VJ4Wcy9PlfAtleJ4H/exec";
-let products=[], categories=[], cart=[], userId="", userName="", pickupStores=[];
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwwzSkccQoNfp-5ow32frNOeCeOd2YH39kWBJqcjLxrYyk7qrs41YqMfkriqJaZvODD/exec";
+let products=[], categories=[], cart=[], userId="", userName="";
+let pickupStores = [];
 
 // LIFF 初始化
 async function initLIFF(){
@@ -218,34 +220,20 @@ function renderCategories(){
 function renderProducts(category){
   const container = document.getElementById("productContainer");
   container.innerHTML="";
-  const now = new Date();
-  const oneWeek = 7*24*60*60*1000;
-
   products.filter(p=>p['類別']===category).forEach(p=>{
     const card=document.createElement("div");
     card.className="product-card";
-
-    // 標籤
-    let labels = '';
-    if(p['標籤'] && p['標籤'].includes('團購')) labels += `<div class="product-label">團購必買</div>`;
-    if(p['標籤'] && p['標籤'].includes('限時')) labels += `<div class="product-label sale">限時優惠</div>`;
-    if(p['銷量'] && parseInt(p['銷量'])>0) labels += `<div class="product-label hot">熱銷</div>`;
-    if(p['上架日期'] && (now - new Date(p['上架日期']))<oneWeek) labels += `<div class="product-label new">新品</div>`;
-    if(p['原價'] && p['售價'] && parseInt(p['售價']) < parseInt(p['原價'])) labels += `<div class="product-label sale">特價</div>`;
-    if(p['庫存']<=0) labels += `<div class="product-label soldout">缺貨</div>`;
-
     card.innerHTML=`
-      ${labels}
       <img src="${p['商品照片']||''}" alt="${p['商品名稱']}">
       <h3>${p['商品名稱']}</h3>
       <p>${p['特色說明']||''}</p>
       <p>單位：${p['單位']}</p>
-      <p class="price">${p['售價']} 元 ${p['原價'] && parseInt(p['售價']) < parseInt(p['原價']) ? `<span class="old-price">${p['原價']} 元</span>` : ''}</p>
+      <p class="price">${p['售價']} 元</p>
       <p class="quantity-control">
         <button onclick="changeQty('${p['商品名稱']}',-1)">-</button>
         <span id="qty-${p['商品名稱']}">1</span>
         <button onclick="changeQty('${p['商品名稱']}',1)">+</button>
-        <button class="add-cart" onclick="addToCartToggle('${p['商品名稱']}', this)">🛒</button>
+        <button class="add-cart" onclick="addToCartWithAnimation('${p['商品名稱']}', this)">🛒</button>
       </p>
     `;
     container.appendChild(card);
@@ -257,26 +245,37 @@ function changeQty(name, delta){
   let qty = parseInt(span.textContent);
   qty += delta;
   if(qty<1) qty=1;
-  span.textContent = qty;
-  span.classList.add("pop");
-  setTimeout(()=>{ span.classList.remove("pop"); },150);
+  span.textContent=qty;
 }
 
-// 加入購物車 / 移除
-function addToCartToggle(name, btn){
+function addToCartWithAnimation(name, btn){
   const qty = parseInt(document.getElementById(`qty-${name}`).textContent);
   const product = products.find(p=>p['商品名稱']===name);
-  const index = cart.findIndex(c=>c.name===name);
+  const exist = cart.find(c=>c.name===name);
+  if(exist) exist.quantity += qty;
+  else cart.push({name, price:parseInt(product['售價']), quantity:qty, category:product['類別']});
 
-  if(index>-1){
-    cart.splice(index,1);
-    btn.classList.remove("active");
-  } else {
-    cart.push({name, price:parseInt(product['售價']), quantity:qty, category:product['類別']});
-    btn.classList.add("active");
-  }
+  // 購物車顏色變綠
+  btn.closest(".product-card").classList.add("active");
 
-  updateCartBar();
+  // 飛入動畫
+  const img = btn.closest(".product-card").querySelector("img");
+  const imgRect = img.getBoundingClientRect();
+  const cartRect = document.getElementById("cartBtn").getBoundingClientRect();
+  const flyImg = img.cloneNode(true);
+  flyImg.style.position="fixed";
+  flyImg.style.left=imgRect.left+"px";
+  flyImg.style.top=imgRect.top+"px";
+  flyImg.style.width=imgRect.width+"px";
+  flyImg.style.height=imgRect.height+"px";
+  flyImg.style.transition="all 0.8s ease-in-out";
+  flyImg.style.zIndex=1000;
+  document.body.appendChild(flyImg);
+
+  const dx = cartRect.left - imgRect.left + "px";
+  const dy = cartRect.top - imgRect.top + "px";
+  requestAnimationFrame(()=>{ flyImg.style.transform=`translate(${dx},${dy}) scale(0.2)`; flyImg.style.opacity=0; });
+  flyImg.addEventListener("transitionend",()=>{ document.body.removeChild(flyImg); updateCartBar(); });
 }
 
 function updateCartBar(){
@@ -288,13 +287,12 @@ function updateCartBar(){
   cartBar.style.display="flex";
 }
 
-// 顯示購物車
 const cartBtn=document.getElementById("cartBtn");
-const cartBarEl=document.getElementById("cartBar");
+const cartBar=document.getElementById("cartBar");
 const cartModal=document.getElementById("cartModal");
 const cartClose=document.getElementById("cartClose");
 cartBtn.onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
-cartBarEl.onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
+cartBar.onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
 cartClose.onclick=()=>{ cartModal.style.display="none"; }
 
 function renderCart(){
@@ -375,6 +373,8 @@ initLIFF();
 fetchProducts();
 </script>
 </body>
+</html>
+
 
 
 
