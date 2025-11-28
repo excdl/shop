@@ -4,13 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>取貨確認</title>
+
 <style>
-body { font-family: Arial, "Microsoft JhengHei"; padding: 20px; background: #f0f0f0; }
-.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
-h2 { color: #4CAF50; }
-button {
-  width: 100%; padding: 12px; border: none; border-radius: 8px;
-  background: #4CAF50; color: white; font-size: 1.1em; margin-top: 20px;
+body { font-family: "Microsoft JhengHei"; padding:20px; background:#eee; }
+.card {
+  background:white; padding:20px; border-radius:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+}
+h2 { color:#4CAF50; margin-bottom:10px; }
+.item { padding:6px 0; border-bottom:1px solid #ddd; }
+button{
+  width:100%; padding:14px; border:none;
+  background:#4CAF50; color:white;
+  border-radius:8px; font-size:1.2em;
+  margin-top:20px;
 }
 </style>
 </head>
@@ -18,60 +25,62 @@ button {
 
 <div class="card">
   <h2>取貨資訊</h2>
-  <p id="orderInfo">讀取中...</p>
-
+  <div id="info">載入中...</div>
   <h3>商品明細</h3>
-  <ul id="itemList"></ul>
+  <div id="items"></div>
 
   <button id="pickupBtn">✓ 確認取貨</button>
 </div>
 
 <script>
-const API_URL = "YOUR_SCRIPT_URL";  // ← 請換成你的 Apps Script 網址
-const urlParams = new URLSearchParams(window.location.search);
-const orderId = urlParams.get("orderId");
+const API_URL = "https://script.google.com/macros/s/AKfycby2yx4BcFIYnCNUMyU5hOBwNlizn047kJCVJpW3QUrUzSS4TDcuNdTp-rm3mSGfMe-U/exec";
+const orderId = new URLSearchParams(location.search).get("orderId");
 
 async function loadOrder(){
-  const res = await fetch(API_URL + `?action=getPickupOrder&orderId=${orderId}`);
+  const res = await fetch(`${API_URL}?action=getPickupOrder&orderId=${orderId}`);
   const data = await res.json();
 
   if(data.error){
-    document.getElementById("orderInfo").textContent = "找不到訂單";
+    document.getElementById("info").innerHTML = "<b>找不到訂單</b>";
     return;
   }
 
-  document.getElementById("orderInfo").innerHTML = `
-    <b>訂單編號：</b> ${data.orderId}<br>
-    <b>訂購日期：</b> ${data.date}<br>
-    <b>會員姓名：</b> ${data.userName}<br>
-    <b>取貨門市：</b> ${data.pickupStore}<br>
-    <b>總金額：</b> ${data.totalAmount} 元
+  document.getElementById("info").innerHTML = `
+    <b>訂單編號：</b>${data.orderId}<br>
+    <b>訂購日期：</b>${data.date}<br>
+    <b>會員姓名：</b>${data.userName}<br>
+    <b>取貨門市：</b>${data.pickupStore}<br>
+    <b>總金額：</b>${data.totalAmount} 元<br>
+    <b>取貨狀態：</b>${data.pickupStatus}
   `;
 
-  const ul = document.getElementById("itemList");
+  const itemsDiv = document.getElementById("items");
+  itemsDiv.innerHTML = "";
   data.items.forEach(i=>{
-    const li = document.createElement("li");
-    li.textContent = `${i.name} × ${i.quantity} = ${i.subtotal} 元`;
-    ul.appendChild(li);
+    itemsDiv.innerHTML += `<div class="item">${i.name} × ${i.quantity} = ${i.subtotal} 元</div>`;
   });
+
+  if(data.pickupStatus === "已取貨"){
+    document.getElementById("pickupBtn").disabled = true;
+    document.getElementById("pickupBtn").style.background = "#888";
+    document.getElementById("pickupBtn").textContent = "已完成取貨";
+  }
 }
 
-document.getElementById("pickupBtn").onclick = async function(){
-  if(!confirm("確定已完成取貨？")) return;
+document.getElementById("pickupBtn").onclick = async ()=>{
+  if(!confirm("確認完成取貨？")) return;
 
   const res = await fetch(API_URL.replace("/exec","/exec-pickup"), {
     method: "POST",
     body: JSON.stringify({ orderId })
   });
-
   const result = await res.json();
-  alert(result.message || "已完成取貨");
-
+  alert(result.message);
   location.reload();
 };
 
 loadOrder();
 </script>
-
 </body>
 </html>
+
