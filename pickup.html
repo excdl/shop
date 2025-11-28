@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>取貨確認</title>
+<style>
+body { font-family: Arial, "Microsoft JhengHei"; padding: 20px; background: #f0f0f0; }
+.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+h2 { color: #4CAF50; }
+button {
+  width: 100%; padding: 12px; border: none; border-radius: 8px;
+  background: #4CAF50; color: white; font-size: 1.1em; margin-top: 20px;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>取貨資訊</h2>
+  <p id="orderInfo">讀取中...</p>
+
+  <h3>商品明細</h3>
+  <ul id="itemList"></ul>
+
+  <button id="pickupBtn">✓ 確認取貨</button>
+</div>
+
+<script>
+const API_URL = "YOUR_SCRIPT_URL";  // ← 請換成你的 Apps Script 網址
+const urlParams = new URLSearchParams(window.location.search);
+const orderId = urlParams.get("orderId");
+
+async function loadOrder(){
+  const res = await fetch(API_URL + `?action=getPickupOrder&orderId=${orderId}`);
+  const data = await res.json();
+
+  if(data.error){
+    document.getElementById("orderInfo").textContent = "找不到訂單";
+    return;
+  }
+
+  document.getElementById("orderInfo").innerHTML = `
+    <b>訂單編號：</b> ${data.orderId}<br>
+    <b>訂購日期：</b> ${data.date}<br>
+    <b>會員姓名：</b> ${data.userName}<br>
+    <b>取貨門市：</b> ${data.pickupStore}<br>
+    <b>總金額：</b> ${data.totalAmount} 元
+  `;
+
+  const ul = document.getElementById("itemList");
+  data.items.forEach(i=>{
+    const li = document.createElement("li");
+    li.textContent = `${i.name} × ${i.quantity} = ${i.subtotal} 元`;
+    ul.appendChild(li);
+  });
+}
+
+document.getElementById("pickupBtn").onclick = async function(){
+  if(!confirm("確定已完成取貨？")) return;
+
+  const res = await fetch(API_URL.replace("/exec","/exec-pickup"), {
+    method: "POST",
+    body: JSON.stringify({ orderId })
+  });
+
+  const result = await res.json();
+  alert(result.message || "已完成取貨");
+
+  location.reload();
+};
+
+loadOrder();
+</script>
+
+</body>
+</html>
