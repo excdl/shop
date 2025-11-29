@@ -108,7 +108,7 @@ header p{font-size:0.85em;}
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyiNAFzfUgGApiAotlMhbltSTFIReoupGw5nThBEHHZsfSOTuadfbquLiJEbBJL3f7b/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxwAM2Kw8qM2CIemNsl3cdAHFfFvn-l0wr2_tsAGj7pXInuhooTGBNbp38AB4kYkRz2/exec";
 let products=[], categories=[], cart=[], userId="", userName="";
 let pickupStores = [];
 
@@ -169,7 +169,7 @@ function renderProducts(category){
     const card=document.createElement("div");
     card.className="product-card";
     card.innerHTML=`
-      <img src="https://drive.google.com/uc?export=view&id=1Jv8nDqwH2fC4Yu7FiIG3oItK2m-ULvGB" alt="商品圖片" />
+      <img src="${p['商品照片']}" alt="${p['商品名稱']}">
       <h3>${p['商品名稱']}</h3>
       <p>${p['特色說明'] || ''}</p>
       <p>單位：${p['單位']}</p>
@@ -330,6 +330,130 @@ fetchProducts();
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
