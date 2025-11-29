@@ -165,7 +165,7 @@ function renderProducts(category){
   const container = document.getElementById("productContainer");
   container.innerHTML="";
 
-  products.filter(p => p['類別'] === category).forEach(p => {
+  products.filter(p => p['分類'] === category).forEach(p => {
     const card=document.createElement("div");
     card.className="product-card";
     card.innerHTML=`
