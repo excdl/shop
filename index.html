@@ -227,6 +227,7 @@ button#checkoutBtn:hover{background:#7CCABA;}
 </div>
 
 <script>
+<script>
 const API_URL = "https://script.google.com/macros/s/AKfycbxMkKxl6kFI8Wlo0BE3S1MWJml6kATkUq_dY9qRIsEHnNfbfsDLBrcgbrnXY6vHIXvS/exec";
 let products=[], categories=[], cart=[], userId="", userName="";
 let pickupStores = [];
@@ -284,6 +285,9 @@ function renderProducts(category){
   const container = document.getElementById("productContainer");
   container.innerHTML="";
   products.filter(p => p['類別'] === category).forEach(p => {
+    const name=p['商品名稱'];
+    const inCart = cart.some(c => c.name === name);
+
     const card=document.createElement("div");
     card.className="product-card";
     card.innerHTML=`
@@ -293,10 +297,10 @@ function renderProducts(category){
       <p>單位：${p['單位']}</p>
       <p class="price">${p['售價']} 元</p>
       <p class="quantity-control">
-        <button onclick="changeQty('${p['商品名稱']}',-1)">-</button>
-        <span id="qty-${p['商品名稱']}">1</span>
-        <button onclick="changeQty('${p['商品名稱']}',1)">+</button>
-        <button class="add-cart" onclick="addToCartWithAnimation('${p['商品名稱']}', this)">🛒</button>
+        <button onclick="changeQty('${name}',-1)">-</button>
+        <span id="qty-${name}">1</span>
+        <button onclick="changeQty('${name}',1)">+</button>
+        <button class="add-cart ${inCart ? 'active':''}" onclick="addToCart('${name}', this)">🛒</button>
       </p>
     `;
     container.appendChild(card);
@@ -312,40 +316,19 @@ function changeQty(name, delta){
   span.textContent=qty;
 }
 
-// 加入購物車動畫
-function addToCartWithAnimation(name, btn){
+// 加入/移除購物車
+function addToCart(name, btn){
   const qty = parseInt(document.getElementById(`qty-${name}`).textContent);
   const product = products.find(p=>p['商品名稱']===name);
-  const existIndex = cart.findIndex(c=>c.name===name);
+  const idx = cart.findIndex(c=>c.name===name);
 
-  const img = btn.closest(".product-card").querySelector("img");
-  const imgRect = img.getBoundingClientRect();
-  const cartRect = document.getElementById("cartBtn").getBoundingClientRect();
-
-  if(existIndex !== -1){ 
-    cart.splice(existIndex, 1);
+  if(idx !== -1){
+    cart.splice(idx,1);
     btn.classList.remove("active");
-  } else { 
-    cart.push({name, price: parseInt(product['售價']), quantity: qty, category: product['類別']});
+  } else {
+    cart.push({name, price: parseInt(product['售價']), quantity: qty});
     btn.classList.add("active");
   }
-
-  const flyImg = img.cloneNode(true);
-  flyImg.style.position = "fixed";
-  flyImg.style.left = imgRect.left + "px";
-  flyImg.style.top = imgRect.top + "px";
-  flyImg.style.width = imgRect.width + "px";
-  flyImg.style.height = imgRect.height + "px";
-  flyImg.style.transition = "all 0.6s ease-in-out";
-  flyImg.style.zIndex = 1000;
-  flyImg.style.opacity = 0.8;
-  document.body.appendChild(flyImg);
-
-  const dx = cartRect.left - imgRect.left + "px";
-  const dy = cartRect.top - imgRect.top + "px";
-  requestAnimationFrame(()=>{ flyImg.style.transform = `translate(${dx},${dy}) scale(0.2)`; flyImg.style.opacity = 0.5; });
-  flyImg.addEventListener("transitionend", ()=>{ document.body.removeChild(flyImg); updateCartBar(); });
-
   updateCartBar();
 }
 
@@ -360,13 +343,8 @@ function updateCartBar(){
 }
 
 // 打開購物車
-const cartBtn=document.getElementById("cartBtn");
-const cartBar=document.getElementById("cartBar");
-const cartModal=document.getElementById("cartModal");
-const cartClose=document.getElementById("cartClose");
-cartBtn.onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
-cartBar.onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
-cartClose.onclick=()=>{ cartModal.style.display="none"; }
+document.getElementById("cartBar").onclick=()=>{ renderCart(); cartModal.style.display="flex"; }
+document.getElementById("cartClose").onclick=()=>{ cartModal.style.display="none"; }
 
 function renderCart(){
   const container=document.getElementById("cartItems");
@@ -380,22 +358,38 @@ function renderCart(){
     container.appendChild(div);
   });
   document.getElementById("cartTotal").textContent=total;
-  updateCartBar();
 }
 
 // 取貨方式切換
-document.getElementById("deliveryMethod").onchange = function(){
+document.getElementById("deliveryMethod").onchange = async function(){
   const val = this.value;
+
   if(val === "自取"){ 
     document.getElementById("selfPickup").style.display = "block"; 
     document.getElementById("deliveryForm").style.display = "none"; 
-  } else if(val === "外送"){ 
+    return;
+  } 
+
+  if(val === "外送"){ 
     document.getElementById("selfPickup").style.display = "none"; 
-    document.getElementById("deliveryForm").style.display = "block"; 
-  } else {
-    document.getElementById("selfPickup").style.display = "none";
-    document.getElementById("deliveryForm").style.display = "none";
+    document.getElementById("deliveryForm").style.display = "block";
+
+    // 🔥 先查出客戶資料
+    const res = await fetch(`${API_URL}?action=getUser&userId=${userId}`);
+    const user = await res.json();
+
+    if(user && user.name){
+      document.getElementById("receiverName").value = user.name;
+      document.getElementById("receiverPhone").value = user.phone;
+      document.getElementById("receiverAddress").value = user.address;
+
+      alert(`系統已找到您的外送資料：\n姓名：${user.name}\n電話：${user.phone}\n地址：${user.address}`);
+    }
+    return;
   }
+
+  document.getElementById("selfPickup").style.display = "none";
+  document.getElementById("deliveryForm").style.display = "none";
 }
 
 // 結帳
@@ -406,34 +400,16 @@ document.getElementById("checkoutBtn").onclick = async function(){
   const deliveryMethod = document.getElementById("deliveryMethod").value;
   if(!deliveryMethod){ alert("請選擇取貨方式"); return; }
 
-  let shippingFee=0, receiverName="", receiverPhone="", receiverAddress="", pickupStore="";
+  let receiverName="", receiverPhone="", receiverAddress="", pickupStore="";
 
   if(deliveryMethod==="外送"){
     if(totalAmount<1500){ alert("外送金額需達1500元以上"); return; }
+
     receiverName=document.getElementById("receiverName").value;
     receiverPhone=document.getElementById("receiverPhone").value;
     receiverAddress=document.getElementById("receiverAddress").value;
     if(!receiverName||!receiverPhone||!receiverAddress){ alert("請完整填寫收件資訊"); return; }
 
-    // 🔹 自動更新會員資料
-    const res = await fetch(API_URL, {
-      method:'POST',
-      body: JSON.stringify({
-        userId,
-        userName,
-        name: receiverName,
-        phone: receiverPhone,
-        address: receiverAddress
-      })
-    });
-    const result = await res.json();
-
-    // ✅ 將更新後資料帶入前台表單
-    if(result.user){
-      document.getElementById("receiverName").value = result.user.name;
-      document.getElementById("receiverPhone").value = result.user.phone;
-      document.getElementById("receiverAddress").value = result.user.address;
-    }
   } else {
     pickupStore=document.getElementById("pickupStore").value;
     if(!pickupStore){ alert("請選擇取貨門市"); return; }
@@ -442,36 +418,29 @@ document.getElementById("checkoutBtn").onclick = async function(){
   const paymentMethod=document.getElementById("paymentMethod").value;
 
   const data={
-    userId,userName,totalAmount,shippingFee,paymentMethod,
-    deliveryMethod,receiverName,receiverPhone,receiverAddress,pickupStore,items:cart
+    userId,userName,totalAmount,paymentMethod,
+    deliveryMethod,receiverName,receiverPhone,receiverAddress,pickupStore,
+    items:cart
   };
 
-  // 下單到 GAS
-  const resOrder=await fetch(API_URL,{method:'POST',body:JSON.stringify(data)});
+  // 下單
+  const resOrder=await fetch(API_URL,{
+    method:'POST',
+    body:JSON.stringify(data)
+  });
   const resultOrder=await resOrder.json();
   alert("訂單完成，單號："+resultOrder.orderId);
 
-  // 產生 QRCode
-  document.getElementById("qrcodeContainer").innerHTML="";
-  const orderDetailUrl = `${window.location.origin}?page=pickup&orderId=${resultOrder.orderId}`;
-  new QRCode(document.getElementById("qrcodeContainer"), {text: orderDetailUrl,width:128,height:128});
-  const link = document.createElement("a");
-  link.href = orderDetailUrl;
-  link.textContent = "點擊查看訂單明細";
-  link.target = "_blank";
-  link.style.display = "block";
-  link.style.textAlign = "center";
-  link.style.marginTop = "0.5em";
-  document.getElementById("qrcodeContainer").appendChild(link);
-
-  cart=[]; updateCartBar(); cartModal.style.display="none";
+  cart=[]; 
+  updateCartBar(); 
+  cartModal.style.display="none";
 }
-
 
 // 初始化
 initLIFF();
 fetchProducts();
 </script>
+
 
 </body>
 </html>
