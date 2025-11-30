@@ -108,7 +108,7 @@ header p{font-size:0.85em;}
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzu8ieOuED9z8zQJBbUrvotaf2tPaJQZtYz5ovqC7tW3qW5d-ceW1sa3RS_NXge0o6a/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby-246ODZexiO7hClFiaoBtuzDJp2r6JM0baNzyepZrdKdT2kTIJdy7hyyZh-mnXQbf/exec";
 let products=[], categories=[], cart=[], userId="", userName="";
 let pickupStores = [];
 
@@ -127,7 +127,7 @@ async function initLIFF(){
 async function fetchProducts(){
   const res = await fetch(API_URL+"?action=products");
   products = await res.json();
- categories = [...new Set(products.map(p => p['類別']))].filter(Boolean);
+  categories = [...new Set(products.map(p => p['類別']))].filter(Boolean);
   renderCategories();
   renderProducts(categories[0]);
 
@@ -164,7 +164,6 @@ function renderCategories(){
 function renderProducts(category){
   const container = document.getElementById("productContainer");
   container.innerHTML="";
-
   products.filter(p => p['類別'] === category).forEach(p => {
     const card=document.createElement("div");
     card.className="product-card";
@@ -184,7 +183,6 @@ function renderProducts(category){
     container.appendChild(card);
   });
 }
-
 
 // 數量調整
 function changeQty(name, delta){
@@ -294,6 +292,15 @@ document.getElementById("checkoutBtn").onclick=async function(){
   } else { pickupStore=document.getElementById("pickupStore").value; }
 
   const paymentMethod=document.getElementById("paymentMethod").value;
+
+  // 🔹 自動更新會員資料
+  if(deliveryMethod==="外送"){
+    await fetch(API_URL,{
+      method:'POST',
+      body:JSON.stringify({userId,userName,name:receiverName,phone:receiverPhone,address:receiverAddress})
+    });
+  }
+
   const data={userId,userName,totalAmount,shippingFee,paymentMethod,
               deliveryMethod,receiverName,receiverPhone,receiverAddress,pickupStore,items:cart};
 
@@ -315,12 +322,6 @@ document.getElementById("checkoutBtn").onclick=async function(){
   link.style.marginTop = "0.5em";
   document.getElementById("qrcodeContainer").appendChild(link);
 
-  // 自動發送 LINE 訊息
-  await fetch(API_URL,{
-    method:'POST',
-    body:JSON.stringify({action:"sendLine", orderId:result.orderId})
-  });
-
   cart=[]; updateCartBar(); cartModal.style.display="none";
 }
 
@@ -328,6 +329,7 @@ document.getElementById("checkoutBtn").onclick=async function(){
 initLIFF();
 fetchProducts();
 </script>
+
 </body>
 </html>
 
