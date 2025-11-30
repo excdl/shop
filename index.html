@@ -97,12 +97,6 @@ button#checkoutBtn:hover{background:#63c5b5;}
 header h1{font-size:1.4em;}
 header p{font-size:0.85em;}
 }
-@keyframes flyToCart {
-  0% {transform: translate(0,0) scale(1); opacity:1;}
-  50% {transform: translate(150px,-300px) scale(0.5); opacity:0.7;}
-  100% {transform: translate(300px,-500px) scale(0); opacity:0;}
-}
-
 .fly-img {
   position:fixed;
   width:50px;
@@ -110,7 +104,8 @@ header p{font-size:0.85em;}
   border-radius:8px;
   z-index:9999;
   pointer-events:none;
-  animation: flyToCart 0.8s forwards;
+  transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.8s;
+  opacity:1;
 }
 
 </style>
@@ -268,17 +263,40 @@ function addToCartWithAnimation(idName, btn){
   const existIndex = cart.findIndex(c=>c.name===name);
 
   // 動畫效果
+  function addToCartWithAnimation(idName, btn){
+  const name = decodeURIComponent(idName);
+  const qty = parseInt(document.getElementById(`qty-${idName}`).textContent);
+  const product = products.find(p=>p['商品名稱']===name);
+  const existIndex = cart.findIndex(c=>c.name===name);
+
+  // ===== 動畫飛入購物車條 =====
   const img = document.querySelector(`#productContainer img[alt='${name}']`);
-  if(img){
+  const cartBar = document.getElementById("cartBar");
+  if(img && cartBar){
     const flyImg = img.cloneNode(true);
-    const rect = img.getBoundingClientRect();
-    flyImg.style.top = rect.top + "px";
-    flyImg.style.left = rect.left + "px";
+    const imgRect = img.getBoundingClientRect();
+    const cartRect = cartBar.getBoundingClientRect();
+
+    flyImg.style.top = imgRect.top + "px";
+    flyImg.style.left = imgRect.left + "px";
     flyImg.classList.add("fly-img");
     document.body.appendChild(flyImg);
-    flyImg.addEventListener("animationend", ()=>flyImg.remove());
+
+    // 計算 x, y 位移
+    const deltaX = cartRect.left + cartRect.width/2 - (imgRect.left + imgRect.width/2);
+    const deltaY = cartRect.top + cartRect.height/2 - (imgRect.top + imgRect.height/2);
+
+    // 使用 requestAnimationFrame 觸發 transition
+    requestAnimationFrame(()=>{
+      flyImg.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0)`;
+      flyImg.style.opacity = 0;
+    });
+
+    // 動畫結束後刪除
+    flyImg.addEventListener("transitionend", ()=>flyImg.remove());
   }
 
+  // ===== 更新購物車內容 =====
   if(btn.classList.contains('active')){
     // 綠色 → 移除
     if(existIndex !== -1) cart.splice(existIndex,1);
@@ -294,6 +312,7 @@ function addToCartWithAnimation(idName, btn){
   }
   updateCartBar();
 }
+
 
 // ===== 更新購物車條 =====
 function updateCartBar(){
