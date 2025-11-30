@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>生鮮蔬果購物商城</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+<style>
 <style>
 /* ===========================
    全站主題色：馬卡龍磚紅系
@@ -275,37 +275,31 @@ header p{ margin:0.3em 0 0 0;font-size:0.95em; }
     header p{ font-size:0.85em; }
 }
 </style>
-
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-
 <body>
-
 <header>
-  <h1>生鮮蔬果購物商城</h1>
-  <p id="greeting">您好, 會員</p>
+<h1>生鮮蔬果購物商城</h1>
+<p id="greeting">您好, 會員</p>
 </header>
 
 <div class="container">
-  <div class="categories" id="categoryContainer"></div>
-  <div class="products" id="productContainer"></div>
+<div class="categories" id="categoryContainer"></div>
+<div class="products" id="productContainer"></div>
 </div>
 
-<!-- 取消干擾購物車 → 已隱藏 -->
-
-<!-- 底部結帳條 -->
+<div class="cart" id="cartBtn">🛒</div>
 <div id="cartBar">
   <span id="cartInfo">🛒 0 件 | 0 元</span>
-  <button id="openCartBtn">查看購物車</button>
+  <span>查看購物車</span>
 </div>
 
-<!-- 購物車 Modal -->
 <div class="modal" id="cartModal">
   <div class="modal-content">
     <span class="modal-close" id="cartClose">&times;</span>
     <h3>購物車</h3>
-
     <div id="cartItems"></div>
-
     <p>總額：<span id="cartTotal">0</span> 元</p>
 
     <h4>付款方式</h4>
@@ -315,24 +309,25 @@ header p{ margin:0.3em 0 0 0;font-size:0.95em; }
       <option value="Line Pay">Line Pay</option>
     </select>
 
-    <h4>取貨方式</h4>
-    <select id="deliveryMethod">
-      <option value="" selected disabled>請選擇取貨方式</option>
-      <option value="自取">自取</option>
-      <option value="外送">外送</option>
-    </select>
+<h4>取貨方式</h4>
+<select id="deliveryMethod">
+  <option value="" selected disabled>請選擇取貨方式</option>
+  <option value="自取">自取</option>
+  <option value="外送">外送</option>
+</select>
 
-    <div id="selfPickup" style="display:none;">
-      <p>選擇取貨門市</p>
-      <select id="pickupStore"></select>
-    </div>
+<div id="selfPickup" style="display:none;">
+  <p>選擇取貨門市</p>
+  <select id="pickupStore"></select>
+</div>
 
-    <div id="deliveryForm" style="display:none;">
-      <p>請輸入收件資訊</p>
-      <input type="text" id="receiverName" placeholder="姓名"><br>
-      <input type="text" id="receiverPhone" placeholder="電話"><br>
-      <input type="text" id="receiverAddress" placeholder="地址"><br>
-    </div>
+<div id="deliveryForm" style="display:none;">
+  <p>請輸入收件資訊</p>
+  <input type="text" id="receiverName" placeholder="姓名"><br>
+  <input type="text" id="receiverPhone" placeholder="電話"><br>
+  <input type="text" id="receiverAddress" placeholder="地址"><br>
+</div>
+
 
     <button id="checkoutBtn">✅ 結帳</button>
     <div id="qrcodeContainer"></div>
@@ -588,26 +583,6 @@ fetchProducts();
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
