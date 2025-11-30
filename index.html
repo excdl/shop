@@ -267,19 +267,54 @@ function addToCartWithAnimation(idName, btn){
   }
   updateCartBar();
 }
+// 加入購物車動畫
+function addToCartWithAnimation(name, btn){
+  const qty = parseInt(document.getElementById(`qty-${name}`).textContent);
+  const product = products.find(p=>p['商品名稱']===name);
+  const existIndex = cart.findIndex(c=>c.name===name);
 
-// ===== 更新購物車條 =====
+  const img = btn.closest(".product-card").querySelector("img");
+  const imgRect = img.getBoundingClientRect();
+  const cartRect = document.getElementById("cartBtn").getBoundingClientRect();
+
+  if(existIndex !== -1){ 
+    cart.splice(existIndex, 1);
+    btn.classList.remove("active");
+  } else { 
+    cart.push({name, price: parseInt(product['售價']), quantity: qty, category: product['類別']});
+    btn.classList.add("active");
+  }
+
+  const flyImg = img.cloneNode(true);
+  flyImg.style.position = "fixed";
+  flyImg.style.left = imgRect.left + "px";
+  flyImg.style.top = imgRect.top + "px";
+  flyImg.style.width = imgRect.width + "px";
+  flyImg.style.height = imgRect.height + "px";
+  flyImg.style.transition = "all 0.6s ease-in-out";
+  flyImg.style.zIndex = 1000;
+  flyImg.style.opacity = 0.8;
+  document.body.appendChild(flyImg);
+
+  const dx = cartRect.left - imgRect.left + "px";
+  const dy = cartRect.top - imgRect.top + "px";
+  requestAnimationFrame(()=>{ flyImg.style.transform = `translate(${dx},${dy}) scale(0.2)`; flyImg.style.opacity = 0.5; });
+  flyImg.addEventListener("transitionend", ()=>{ document.body.removeChild(flyImg); updateCartBar(); });
+
+  updateCartBar();
+}
+
+
+// 更新購物車條
 function updateCartBar(){
   const cartBar = document.getElementById("cartBar");
-  if(cart.length===0){ 
-    cartBar.style.display="none"; 
-    return; 
-  }
+  if(cart.length===0){ cartBar.style.display="none"; return; }
   const totalQty = cart.reduce((sum,i)=>sum+i.quantity,0);
   const totalAmt = cart.reduce((sum,i)=>sum+i.quantity*i.price,0);
   document.getElementById("cartInfo").textContent=`🛒 ${totalQty} 件 | ${totalAmt} 元`;
   cartBar.style.display="flex";
 }
+
 
 // ===== 打開購物車 =====
 const cartModal = document.getElementById("cartModal");
