@@ -245,7 +245,6 @@ function changeQty(idName, delta){
   if(qty<1) qty=1;
   span.textContent=qty;
 }
-
 // ===== 加入購物車動畫 =====
 function addToCartWithAnimation(idName, btn){
   const name = decodeURIComponent(idName);
@@ -287,19 +286,50 @@ function addToCartWithAnimation(idName, btn){
       setTimeout(()=>cartIcon.classList.remove("flash"),200);
     });
   }
+function addToCartWithAnimation(idName, btn){
+  const name = decodeURIComponent(idName);
+  const qty = parseInt(document.getElementById(`qty-${idName}`).textContent);
+  const product = products.find(p=>p['商品名稱']===name);
+  const existIndex = cart.findIndex(c=>c.name===name);
 
-  // ===== 更新購物車資料 =====
-  if(existIndex !== -1){ 
-    cart[existIndex].quantity += qty;
-  } else { 
-    cart.push({name, price: parseInt(product['售價']), quantity: qty, category: product['類別']});
+  // ✅ 點擊切換加入/移除
+  if(btn.classList.contains("active")){
+    // 移除
+    if(existIndex !== -1) cart.splice(existIndex,1);
+    btn.classList.remove("active");
+    btn.style.background = "#B22222"; // 磚紅色
+  } else {
+    // 新增
+    if(existIndex !== -1){
+      cart[existIndex].quantity += qty;
+    } else {
+      cart.push({name, price: parseInt(product['售價']), quantity: qty, category: product['類別']});
+    }
+    btn.classList.add("active");
+    btn.style.background = "#27ae60"; // 綠色
   }
 
-  btn.classList.add('active');
   updateCartBar();
 }
 
-// ===== 更新購物車條 =====
+// ✅ 更新數量按鈕時也同步購物車
+function changeQty(idName, delta){
+  const span = document.getElementById(`qty-${idName}`);
+  let qty = parseInt(span.textContent);
+  qty += delta;
+  if(qty<1) qty=1;
+  span.textContent = qty;
+
+  // 同步購物車數量
+  const name = decodeURIComponent(idName);
+  const existIndex = cart.findIndex(c=>c.name===name);
+  if(existIndex !== -1){
+    cart[existIndex].quantity = qty;
+    updateCartBar();
+  }
+}
+
+// ✅ 更新購物車條
 function updateCartBar(){
   const cartBar = document.getElementById("cartBar");
   if(cart.length===0){ 
@@ -311,8 +341,7 @@ function updateCartBar(){
   document.getElementById("cartInfo").textContent=`🛒 ${totalQty} 件 | ${totalAmt} 元`;
   cartBar.style.display="flex";
 }
-
-// ===== 打開購物車 =====
+ // ===== 打開購物車 =====
 const cartModal = document.getElementById("cartModal");
 document.getElementById("viewCartBtn").onclick = () => { renderCart(); cartModal.style.display="flex"; }
 document.getElementById("cartClose").onclick = () => { cartModal.style.display="none"; }
