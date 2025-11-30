@@ -22,30 +22,9 @@ header p{margin:0.3em 0 0 0;font-size:0.95em;}
 .product-card h3{margin:0.4em 0 0.2em 0;font-size:1em;}
 .product-card p{margin:0.2em 0;font-size:0.85em;color:#555;}
 .product-card .price{font-weight:bold;color:#ff6b6b;margin-top:0.4em;}
-.quantity-control{
-    margin:0.4em 0;
-    display:flex;
-    align-items:center;
-    justify-content:flex-start; /* 左對齊 */
-    gap:10px;
-}
-.quantity-control button{
-    width:32px; 
-    height:32px; 
-    border:none; 
-    background:#7ed6df; 
-    color:white; 
-    border-radius:4px; 
-    cursor:pointer;
-    font-size:1em;
-}
-.quantity-control span{
-    width:50px; /* 加寬數量框 */
-    text-align:center;
-    display:inline-block;
-    font-weight:bold;
-    font-size:1em;
-}
+.quantity-control{margin:0.4em 0;display:flex;align-items:center;justify-content:flex-start;gap:5px;}
+.quantity-control button{width:28px;height:28px;border:none;background:#7ed6df;color:white;border-radius:4px;cursor:pointer;}
+.quantity-control span{min-width:28px;text-align:center;display:inline-block;}
 .add-cart {
     width:36px;
     height:36px;
@@ -68,43 +47,54 @@ header p{margin:0.3em 0 0 0;font-size:0.95em;}
     box-shadow:0 2px 8px rgba(0,0,0,0.5);
 }
 
+/* 購物條 */
 #cartBar {
     position: fixed;
     left: 0;
-    bottom: 0;
+    bottom: 5%;                     /* 下調5% */
     width: 100%;
-    background:#FFB6B9; /* 馬卡龍磚紅色 */
-    color:white;
+    height:70px;                     /* 高度加高約10% */
+    background:#3AB0A6;              /* 主色加深50% */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1em 1em; /* 高度加大約10% */
+    padding: 0 10%;
     box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
-    font-weight: bold;
-    font-size: 0.95em;
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
+    font-weight: bold;
+    font-size: 1em;
     display: none;
 }
-#cartBar span#cartInfo {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
+
+/* 左半區購物資訊 */
+#cartBar .cart-info {
+    flex: 1;
+    text-align: center;  /* 文字置中 */
 }
+
+/* 右半區按鈕 */
+#cartBar .cart-btn {
+    flex: 1;
+    text-align: center;  /* 按鈕置中 */
+}
+
 #cartBar button#viewCartBtn {
-    background:#57B3C0; /* 馬卡龍藍色 */
-    border:none;
-    padding:0.6em 1.2em; /* 加大 20% */
-    border-radius:8px;
+    padding: 0.7em 1.5em;
+    background:#FF7F7F;    /* 馬卡龍磚紅加深30% */
     color:white;
+    border:none;
+    border-radius:6px;
     cursor:pointer;
     font-weight:bold;
-    transition:0.3s;
-    font-size:1em;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+    transition: 0.3s;
 }
 #cartBar button#viewCartBtn:hover {
-    background:#FFA7A7;
+    background:#FF9999;
 }
+
+/* 購物車彈窗 */
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);justify-content:center;align-items:flex-start;padding-top:5%;z-index:9999;}
 .modal-content{background:white;padding:1.5em;border-radius:12px;max-height:90%;overflow-y:auto;width:95%;position:relative;font-size:0.9em;}
 .modal-close{position:absolute;top:10px;right:12px;cursor:pointer;color:red;font-weight:bold;font-size:1.2em;}
@@ -120,7 +110,7 @@ button#checkoutBtn:hover{background:#63c5b5;}
 .category-btn{padding:0.5em 0.8em;font-size:0.85em;}
 header h1{font-size:1.4em;}
 header p{font-size:0.85em;}
-.quantity-control span{width:40px;}
+.quantity-control span{min-width:36px;}
 }
 </style>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -137,8 +127,12 @@ header p{font-size:0.85em;}
 </div>
 
 <div id="cartBar">
-  <span id="cartInfo">🛒 0 件 | 0 元</span>
-  <button id="viewCartBtn">查看購物車 / 結帳</button>
+  <div class="cart-info">
+    <span id="cartInfo">🛒 0 件 | 0 元</span>
+  </div>
+  <div class="cart-btn">
+    <button id="viewCartBtn">查看購物車 / 結帳</button>
+  </div>
 </div>
 
 <div class="modal" id="cartModal">
@@ -147,28 +141,33 @@ header p{font-size:0.85em;}
     <h3>購物車</h3>
     <div id="cartItems"></div>
     <p>總額：<span id="cartTotal">0</span> 元</p>
+
     <h4>付款方式</h4>
     <select id="paymentMethod">
       <option value="現金">現金</option>
       <option value="信用卡">信用卡</option>
       <option value="Line Pay">Line Pay</option>
     </select>
+
     <h4>取貨方式</h4>
     <select id="deliveryMethod">
       <option value="" selected disabled>請選擇取貨方式</option>
       <option value="自取">自取</option>
       <option value="外送">外送</option>
     </select>
+
     <div id="selfPickup" style="display:none;">
       <p>選擇取貨門市</p>
       <select id="pickupStore"></select>
     </div>
+
     <div id="deliveryForm" style="display:none;">
       <p>請輸入收件資訊</p>
       <input type="text" id="receiverName" placeholder="姓名"><br>
       <input type="text" id="receiverPhone" placeholder="電話"><br>
       <input type="text" id="receiverAddress" placeholder="地址"><br>
     </div>
+
     <button id="checkoutBtn">✅ 結帳</button>
   </div>
 </div>
@@ -196,6 +195,7 @@ async function fetchProducts(){
   categories = [...new Set(products.map(p => p['類別']))].filter(Boolean);
   renderCategories();
   renderProducts(categories[0]);
+
   const storeRes = await fetch(API_URL+"?action=stores");
   pickupStores = await storeRes.json();
   const storeSelect = document.getElementById("pickupStore");
@@ -266,9 +266,11 @@ function addToCartWithAnimation(name, btn){
   if(existIndex !== -1){ 
     cart.splice(existIndex, 1);
     btn.style.background = "#FFB6B9"; 
+    btn.classList.remove("active");
   } else { 
     cart.push({name, price: parseInt(product['售價']), quantity: qty, category: product['類別']});
-    btn.style.background = "#FFB6B9"; 
+    btn.style.background = "#7ED6A1"; 
+    btn.classList.add("active");
   }
   updateCartBar();
 }
@@ -306,6 +308,18 @@ function renderCart(){
   updateCartBar();
 }
 
+// ===== 外送自動帶入舊資料 =====
+async function fetchUserData() {
+  if(!userId) return;
+  const res = await fetch(API_URL+"?action=getUser&userId="+userId);
+  const result = await res.json();
+  if(result.user){
+    document.getElementById("receiverName").value = result.user.name || "";
+    document.getElementById("receiverPhone").value = result.user.phone || "";
+    document.getElementById("receiverAddress").value = result.user.address || "";
+  }
+}
+
 // ===== 取貨方式切換 =====
 document.getElementById("deliveryMethod").onchange = function(){
   const val = this.value;
@@ -315,6 +329,7 @@ document.getElementById("deliveryMethod").onchange = function(){
   } else if(val === "外送"){ 
     document.getElementById("selfPickup").style.display = "none"; 
     document.getElementById("deliveryForm").style.display = "block"; 
+    fetchUserData();
   } else {
     document.getElementById("selfPickup").style.display = "none";
     document.getElementById("deliveryForm").style.display = "none";
@@ -324,7 +339,35 @@ document.getElementById("deliveryMethod").onchange = function(){
 // ===== 結帳 =====
 document.getElementById("checkoutBtn").onclick = async function(){
   if(cart.length===0){ alert("購物車是空的"); return; }
-  alert("模擬結帳完成！");
+
+  const totalAmount = cart.reduce((sum,i)=>sum+i.price*i.quantity,0);
+  const deliveryMethod = document.getElementById("deliveryMethod").value;
+  if(!deliveryMethod){ alert("請選擇取貨方式"); return; }
+
+  let shippingFee=0, receiverName="", receiverPhone="", receiverAddress="", pickupStore="";
+
+  if(deliveryMethod==="外送"){
+    if(totalAmount<1500){ alert("外送金額需達1500元以上"); return; }
+    receiverName=document.getElementById("receiverName").value;
+    receiverPhone=document.getElementById("receiverPhone").value;
+    receiverAddress=document.getElementById("receiverAddress").value;
+    if(!receiverName||!receiverPhone||!receiverAddress){ alert("請完整填寫收件資訊"); return; }
+  } else {
+    pickupStore=document.getElementById("pickupStore").value;
+    if(!pickupStore){ alert("請選擇取貨門市"); return; }
+  }
+
+  const paymentMethod=document.getElementById("paymentMethod").value;
+
+  const data={
+    userId,userName,totalAmount,shippingFee,paymentMethod,
+    deliveryMethod,receiverName,receiverPhone,receiverAddress,pickupStore,items:cart
+  };
+
+  const resOrder=await fetch(API_URL,{method:'POST',body:JSON.stringify(data)});
+  const resultOrder=await resOrder.json();
+  alert("訂單完成，單號："+resultOrder.orderId);
+
   cart=[]; updateCartBar(); cartModal.style.display="none";
 }
 
@@ -334,8 +377,6 @@ fetchProducts();
 </script>
 </body>
 </html>
-
-
 
 
 
