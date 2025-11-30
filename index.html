@@ -271,18 +271,24 @@ document.getElementById("deliveryMethod").onchange = function(){
   if(val === "自取"){ 
     document.getElementById("selfPickup").style.display = "block"; 
     document.getElementById("deliveryForm").style.display = "none"; 
-  } else { 
+  } else if(val === "外送"){ 
     document.getElementById("selfPickup").style.display = "none"; 
     document.getElementById("deliveryForm").style.display = "block"; 
+  } else {
+    document.getElementById("selfPickup").style.display = "none";
+    document.getElementById("deliveryForm").style.display = "none";
   }
 }
 
 // 結帳
-document.getElementById("checkoutBtn").onclick=async function(){
+document.getElementById("checkoutBtn").onclick = async function(){
   if(cart.length===0){ alert("購物車是空的"); return; }
-  const totalAmount=cart.reduce((sum,i)=>sum+i.price*i.quantity,0);
-  const deliveryMethod=document.getElementById("deliveryMethod").value;
-  let shippingFee=0,receiverName="",receiverPhone="",receiverAddress="",pickupStore="";
+
+  const totalAmount = cart.reduce((sum,i)=>sum+i.price*i.quantity,0);
+  const deliveryMethod = document.getElementById("deliveryMethod").value;
+  if(!deliveryMethod){ alert("請選擇取貨方式"); return; }
+
+  let shippingFee=0, receiverName="", receiverPhone="", receiverAddress="", pickupStore="";
 
   if(deliveryMethod==="外送"){
     if(totalAmount<1500){ alert("外送金額需達1500元以上"); return; }
@@ -290,25 +296,59 @@ document.getElementById("checkoutBtn").onclick=async function(){
     receiverPhone=document.getElementById("receiverPhone").value;
     receiverAddress=document.getElementById("receiverAddress").value;
     if(!receiverName||!receiverPhone||!receiverAddress){ alert("請完整填寫收件資訊"); return; }
-  } else { pickupStore=document.getElementById("pickupStore").value; }
+
+    // 🔹 自動更新會員資料
+    const res = await fetch(API_URL, {
+      method:'POST',
+      body: JSON.stringify({
+        userId,
+        userName,
+        name: receiverName,
+        phone: receiverPhone,
+        address: receiverAddress
+      })
+    });
+    const result = await res.json();
+
+    // ✅ 將更新後資料帶入前台表單
+    if(result.user){
+      document.getElementById("receiverName").value = result.user.name;
+      document.getElementById("receiverPhone").value = result.user.phone;
+      document.getElementById("receiverAddress").value = result.user.address;
+    }
+  } else {
+    pickupStore=document.getElementById("pickupStore").value;
+    if(!pickupStore){ alert("請選擇取貨門市"); return; }
+  }
 
   const paymentMethod=document.getElementById("paymentMethod").value;
 
-  // 🔹 自動更新會員資料
-  if(deliveryMethod==="外送"){
-    await fetch(API_URL,{
-      method:'POST',
-      body:JSON.stringify({userId,userName,name:receiverName,phone:receiverPhone,address:receiverAddress})
-    });
-  }
-
-  const data={userId,userName,totalAmount,shippingFee,paymentMethod,
-              deliveryMethod,receiverName,receiverPhone,receiverAddress,pickupStore,items:cart};
+  const data={
+    userId,userName,totalAmount,shippingFee,paymentMethod,
+    deliveryMethod,receiverName,receiverPhone,receiverAddress,pickupStore,items:cart
+  };
 
   // 下單到 GAS
-  const res=await fetch(API_URL,{method:'POST',body:JSON.stringify(data)});
-  const result=await res.json();
-  alert("訂單完成，單號："+result.orderId);
+  const resOrder=await fetch(API_URL,{method:'POST',body:JSON.stringify(data)});
+  const resultOrder=await resOrder.json();
+  alert("訂單完成，單號："+resultOrder.orderId);
+
+  // 產生 QRCode
+  document.getElementById("qrcodeContainer").innerHTML="";
+  const orderDetailUrl = `${window.location.origin}?page=pickup&orderId=${resultOrder.orderId}`;
+  new QRCode(document.getElementById("qrcodeContainer"), {text: orderDetailUrl,width:128,height:128});
+  const link = document.createElement("a");
+  link.href = orderDetailUrl;
+  link.textContent = "點擊查看訂單明細";
+  link.target = "_blank";
+  link.style.display = "block";
+  link.style.textAlign = "center";
+  link.style.marginTop = "0.5em";
+  document.getElementById("qrcodeContainer").appendChild(link);
+
+  cart=[]; updateCartBar(); cartModal.style.display="none";
+}
+
 
   // 產生 QRCode
   document.getElementById("qrcodeContainer").innerHTML="";
