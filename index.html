@@ -176,6 +176,7 @@ async function fetchProducts(){
   try{
     const res = await fetch(API_URL+"?action=products");
     products = await res.json();
+    console.log("抓到商品資料:", products); // ✅確認資料
     categories = [...new Set(products.map(p => p['類別']))].filter(Boolean);
     renderCategories();
     if(categories[0]) renderProducts(categories[0]);
@@ -214,53 +215,61 @@ function renderCategories(){
 function renderProducts(category){
   const container = document.getElementById("productContainer");
   container.innerHTML="";
-  products.filter(p => p['類別'] === category).forEach(p => {
-    const idName = encodeURIComponent(p['商品名稱']);
-    const card=document.createElement("div");
-    card.className="product-card";
-    card.innerHTML=`
-      <img src="${p['商品照片']}" alt="${p['商品名稱']}">
-      <h3>${p['商品名稱']}</h3>
-      <p>${p['特色說明'] || ''}</p>
-      <p>單位：${p['單位']}</p>
-      <p class="price">${p['售價']} 元</p>
-      <p class="quantity-control">
-        <button onclick="changeQty('${idName}',-1)">-</button>
-        <span id="qty-${idName}">1</span>
-        <button onclick="changeQty('${idName}',1)">+</button>
-        <button class="add-cart" style="background:#B22222;color:white;" 
-          onclick="addToCartWithAnimation('${idName}', this)">🛒
-        </button>
-      </p>
-    `;
-    container.appendChild(card);
-  });
+  products
+    .filter(p => p['類別']?.trim() === category?.trim())
+    .forEach(p => {
+      const idName = encodeURIComponent(p['商品名稱']);
+      const card=document.createElement("div");
+      card.className="product-card";
+      card.innerHTML=`
+        <img src="${p['商品照片']}" alt="${p['商品名稱']}">
+        <h3>${p['商品名稱']}</h3>
+        <p>${p['特色說明'] || ''}</p>
+        <p>單位：${p['單位']}</p>
+        <p class="price">${p['售價']} 元</p>
+        <p class="quantity-control">
+          <button onclick="changeQty('${idName}',-1)">-</button>
+          <span id="qty-${idName}">1</span>
+          <button onclick="changeQty('${idName}',1)">+</button>
+          <button class="add-cart" style="background:#B22222;color:white;" 
+            onclick="addToCartWithAnimation('${idName}', this)">🛒
+          </button>
+        </p>
+      `;
+      container.appendChild(card);
+    });
 }
 
-// ===== 數量調整 =====
+// ===== 數量調整並同步購物車 =====
 function changeQty(idName, delta){
   const span = document.getElementById(`qty-${idName}`);
   let qty = parseInt(span.textContent);
   qty += delta;
   if(qty<1) qty=1;
-  span.textContent=qty;
+  span.textContent = qty;
+
+  const name = decodeURIComponent(idName);
+  const existIndex = cart.findIndex(c=>c.name===name);
+  if(existIndex !== -1){
+    cart[existIndex].quantity = qty;
+    updateCartBar();
+  }
 }
-// ===== 加入購物車動畫 =====
+
+// ===== 加入購物車動畫 + 加入/移除邏輯 =====
 function addToCartWithAnimation(idName, btn){
   const name = decodeURIComponent(idName);
   const qty = parseInt(document.getElementById(`qty-${idName}`).textContent);
   const product = products.find(p=>p['商品名稱']===name);
   const existIndex = cart.findIndex(c=>c.name===name);
 
-  // ===== 飛入動畫 =====
+  // 飛入動畫
   const img = btn.closest(".product-card").querySelector("img");
   const cartIcon = document.getElementById("cartBar");
-
   if(img && cartIcon){
     const flyImg = img.cloneNode(true);
     const imgRect = img.getBoundingClientRect();
     const cartRect = cartIcon.getBoundingClientRect();
-
     flyImg.style.position = 'fixed';
     flyImg.style.top = imgRect.top + 'px';
     flyImg.style.left = imgRect.left + 'px';
@@ -270,66 +279,35 @@ function addToCartWithAnimation(idName, btn){
     flyImg.style.zIndex = 9999;
     flyImg.style.transition = 'transform 0.8s cubic-bezier(0.65,0,0.35,1), opacity 0.8s';
     document.body.appendChild(flyImg);
-
     const deltaX = cartRect.left + cartRect.width/2 - (imgRect.left + imgRect.width/2);
     const deltaY = cartRect.top + cartRect.height/2 - (imgRect.top + imgRect.height/2);
-
     requestAnimationFrame(()=>{
       flyImg.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0)`;
       flyImg.style.opacity = 0;
     });
-
-    flyImg.addEventListener('transitionend', ()=>{
-      flyImg.remove();
-      // 小提示動畫：購物車閃一下
+    flyImg.addEventListener('transitionend', ()=>{ 
+      flyImg.remove(); 
       cartIcon.classList.add("flash");
       setTimeout(()=>cartIcon.classList.remove("flash"),200);
     });
   }
-function addToCartWithAnimation(idName, btn){
-  const name = decodeURIComponent(idName);
-  const qty = parseInt(document.getElementById(`qty-${idName}`).textContent);
-  const product = products.find(p=>p['商品名稱']===name);
-  const existIndex = cart.findIndex(c=>c.name===name);
 
-  // ✅ 點擊切換加入/移除
+  // 點擊切換加入/移除購物車
   if(btn.classList.contains("active")){
-    // 移除
     if(existIndex !== -1) cart.splice(existIndex,1);
     btn.classList.remove("active");
-    btn.style.background = "#B22222"; // 磚紅色
+    btn.style.background = "#B22222";
   } else {
-    // 新增
-    if(existIndex !== -1){
-      cart[existIndex].quantity += qty;
-    } else {
-      cart.push({name, price: parseInt(product['售價']), quantity: qty, category: product['類別']});
-    }
+    if(existIndex !== -1) cart[existIndex].quantity += qty;
+    else cart.push({name, price: parseInt(product['售價']), quantity: qty, category: product['類別']});
     btn.classList.add("active");
-    btn.style.background = "#27ae60"; // 綠色
+    btn.style.background = "#27ae60";
   }
 
   updateCartBar();
 }
 
-// ✅ 更新數量按鈕時也同步購物車
-function changeQty(idName, delta){
-  const span = document.getElementById(`qty-${idName}`);
-  let qty = parseInt(span.textContent);
-  qty += delta;
-  if(qty<1) qty=1;
-  span.textContent = qty;
-
-  // 同步購物車數量
-  const name = decodeURIComponent(idName);
-  const existIndex = cart.findIndex(c=>c.name===name);
-  if(existIndex !== -1){
-    cart[existIndex].quantity = qty;
-    updateCartBar();
-  }
-}
-
-// ✅ 更新購物車條
+// ===== 更新購物車條 =====
 function updateCartBar(){
   const cartBar = document.getElementById("cartBar");
   if(cart.length===0){ 
@@ -341,7 +319,8 @@ function updateCartBar(){
   document.getElementById("cartInfo").textContent=`🛒 ${totalQty} 件 | ${totalAmt} 元`;
   cartBar.style.display="flex";
 }
- // ===== 打開購物車 =====
+
+// ===== 打開/關閉購物車 =====
 const cartModal = document.getElementById("cartModal");
 document.getElementById("viewCartBtn").onclick = () => { renderCart(); cartModal.style.display="flex"; }
 document.getElementById("cartClose").onclick = () => { cartModal.style.display="none"; }
@@ -423,7 +402,7 @@ document.getElementById("checkoutBtn").onclick = async function(){
 
   cart=[]; updateCartBar(); cartModal.style.display="none";
 
-  // ✅ 結帳後重置商品數量回 1
+  // 結帳後重置商品數量回 1
   products.forEach(p=>{
     const idName = encodeURIComponent(p['商品名稱']);
     const span = document.getElementById(`qty-${idName}`);
@@ -434,6 +413,7 @@ document.getElementById("checkoutBtn").onclick = async function(){
 // ===== 初始化 =====
 initLIFF().then(fetchProducts);
 </script>
+
 </body>
 </html>
 
